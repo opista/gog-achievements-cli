@@ -1,8 +1,8 @@
 import type { PublicError, Failure } from './types.mjs';
 export class GogError extends Error {
-  code: string;
-  exitCode: number;
-  details?: PublicError['details'];
+  declare code: string;
+  declare exitCode: number;
+  declare details?: PublicError['details'];
   constructor(code: string, message: string, exitCode = 4, details?: PublicError['details']) {
     super(message);
     this.name = 'GogError';

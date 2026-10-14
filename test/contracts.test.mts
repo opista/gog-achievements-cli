@@ -52,6 +52,16 @@ void test('the public entry retains the existing JavaScript exports', () => {
   );
 });
 
+void test('public errors retain the original own properties and optional details', () => {
+  const error = new exported.GogError('FIXTURE_ERROR', 'Fixture message');
+  assert.deepEqual(Object.keys(error), ['name', 'code', 'exitCode']);
+  assert.equal(Object.hasOwn(error, 'details'), false);
+  const details = { fixture: true };
+  const detailed = new exported.GogError('FIXTURE_ERROR', 'Fixture message', 5, details);
+  assert.deepEqual(Object.keys(detailed), ['name', 'code', 'exitCode', 'details']);
+  assert.equal(detailed.details, details);
+});
+
 void test('contract paths normalize both Windows JSON escaping levels', () => {
   const directory = 'C:\\Users\\tester\\Temp\\contract';
   const path = `${directory}\\queue.json`;
