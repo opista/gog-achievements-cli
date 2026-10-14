@@ -164,7 +164,7 @@ npm run demo
 
 `demo` uses fixture data and prints the complete CLI flow. It makes no requests to GOG and does not access your login.
 
-Verified on this Mac: CLI execution, long-session native Keychain round trip, public Cyberpunk GOGDB metadata, and automated queue/auth/API tests. The authenticated GOG library and achievement reads and a real achievement write still need a user login and a selected earned achievement.
+Verified on this Mac: CLI execution, long-session native Keychain round trip, native one-command GOG sign-in, authenticated Cyberpunk library and achievement reads, public Cyberpunk GOGDB metadata, 36 automated CLI tests, and 8 native callback checks. A real achievement write still needs a selected earned achievement.
 
 GOG's gameplay request accepts a `date_unlocked` field in the referenced tools. This implementation supports that field and checks the returned date, but server date limits are not verified on a real account. It does not change dates on already unlocked achievements or edit game statistics. The tool restores platform records; it does not repair the game's future achievement triggers.
 
