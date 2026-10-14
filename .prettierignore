@@ -1,0 +1,9 @@
+node_modules/
+native/bin/
+native/windows/bin/
+native/windows/obj/
+native/windows-tests/bin/
+native/windows-tests/obj/
+.build/
+dist/
+licenses/

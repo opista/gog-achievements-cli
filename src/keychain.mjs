@@ -1,64 +1,125 @@
-import { spawn } from 'node:child_process';
 import { GogError } from './errors.mjs';
+import { nativeHelperPath } from './assets.mjs';
+import { runProcess } from './process.mjs';
+export { runProcess } from './process.mjs';
 
-export async function runProcess(command, args, input = '') {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] });
-    let stdout = '';
-    const timer = setTimeout(() => { child.kill('SIGKILL'); }, 5000);
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', part => {
-      stdout += part;
-      if (stdout.length > 128_000) child.kill('SIGKILL');
-    });
-    child.stderr.on('data', () => {}); // Never relay credential prompts or process errors.
-    child.stdin.on('error', () => {});
-    child.on('error', () => { clearTimeout(timer); reject(new GogError('PROCESS_FAILED', 'Cannot start the required Mac command.', 7)); });
-    child.on('close', code => { clearTimeout(timer); resolve({ code, stdout }); });
-    child.stdin.end(input);
-  });
-}
+const BACKGROUND_TIMEOUT_MS = 5000;
+const KEYCHAIN_APPROVAL_TIMEOUT_MS = 30000;
+const PROFILES = {
+  darwin: {
+    storage: 'macos_keychain',
+    unavailable: 'KEYCHAIN_UNAVAILABLE',
+    mismatch: 'KEYCHAIN_STORE_FAILED',
+    message:
+      'Cannot access the Mac Keychain. Unlock it, run auth login, and allow the GOG sign-in helper access when asked.',
+  },
+  win32: {
+    storage: 'windows_dpapi',
+    unavailable: 'CREDENTIAL_STORE_UNAVAILABLE',
+    mismatch: 'CREDENTIAL_STORE_FAILED',
+    message:
+      'Cannot access the Windows protected login store. Run npm run build if using source, then retry from your Windows user account.',
+  },
+};
 
-export class MacKeychain {
-  constructor({ service = 'gog-achievements-cli', account = 'default', createEntry, platform = process.platform } = {}) {
-    this.service = service;
-    this.account = account;
+class NativeVault {
+  constructor(
+    platform,
+    {
+      execute = runProcess,
+      helperPath = () => nativeHelperPath(platform),
+      service = 'gog-achievements-cli',
+      account = 'default',
+    } = {},
+  ) {
     this.platform = platform;
-    this.createEntry = createEntry ?? (async () => {
-      const { AsyncEntry } = await import('@napi-rs/keyring');
-      return new AsyncEntry(this.service, this.account);
-    });
-    this.entry = null;
+    this.profile = PROFILES[platform];
+    this.storage = this.profile.storage;
+    this.execute = execute;
+    this.helperPath = helperPath;
+    this.keychainIdentity = { service, account };
   }
 
-  async invoke(method, ...values) {
-    if (this.platform !== 'darwin') throw new GogError('MAC_REQUIRED', 'This version stores login details in the Mac Keychain.', 7);
+  async invoke(action, secret, { interactive = false, signal } = {}) {
     try {
-      this.entry ??= await this.createEntry();
-      return await this.entry[method](...values, AbortSignal.timeout(5000));
+      const path = typeof this.helperPath === 'function' ? this.helperPath() : this.helperPath;
+      const request = {
+        action,
+        ...(secret === undefined ? {} : { secret }),
+        ...(this.platform === 'darwin' ? { ...this.keychainIdentity, interactive } : {}),
+      };
+      const timeoutMs =
+        this.platform === 'darwin' && interactive
+          ? KEYCHAIN_APPROVAL_TIMEOUT_MS
+          : BACKGROUND_TIMEOUT_MS;
+      const result = await this.execute(path, ['--vault'], JSON.stringify(request), {
+        timeoutMs,
+        signal,
+      });
+      const event = JSON.parse(result.stdout);
+      if (result.code !== 0 || event?.type !== 'vault') throw new Error();
+      return event;
     } catch {
-      throw new GogError('KEYCHAIN_UNAVAILABLE', 'Cannot access the Mac Keychain. Unlock your login Keychain and retry from Terminal.', 7);
+      throw new GogError(this.profile.unavailable, this.profile.message, 7);
     }
   }
 
   async get() {
-    const secret = await this.invoke('getPassword');
+    const { secret } = await this.invoke('get');
     if (secret === null) return null;
-    try { return JSON.parse(secret); }
-    catch { throw new GogError('INVALID_CREDENTIALS', 'The saved login data is not valid. Sign in again.', 3); }
+    try {
+      if (typeof secret !== 'string') throw new Error();
+      return JSON.parse(secret);
+    } catch {
+      throw new GogError(
+        'INVALID_CREDENTIALS',
+        'The saved login data is not valid. Sign in again.',
+        3,
+      );
+    }
   }
 
-  async set(session) {
+  async set(session, { interactive = false, signal } = {}) {
     const secret = JSON.stringify(session);
-    // Native Keychain calls support full token lengths. Neither shell arguments
-    // nor the security command's bounded password prompt are involved.
-    await this.invoke('setPassword', secret);
-    if (await this.invoke('getPassword') !== secret) {
-      throw new GogError('KEYCHAIN_STORE_FAILED', 'The saved login data did not match. Sign in again.', 7);
+    const timeout = AbortSignal.timeout(
+      this.platform === 'darwin' && interactive
+        ? KEYCHAIN_APPROVAL_TIMEOUT_MS
+        : BACKGROUND_TIMEOUT_MS,
+    );
+    const options = { interactive, signal: signal ? AbortSignal.any([signal, timeout]) : timeout };
+    await this.invoke('set', secret, options);
+    if ((await this.invoke('get', undefined, options)).secret !== secret) {
+      throw new GogError(
+        this.profile.mismatch,
+        'The saved login data did not match. Sign in again.',
+        7,
+      );
     }
   }
 
   async remove() {
-    await this.invoke('deleteCredential');
+    await this.invoke('remove');
   }
+}
+
+export class MacKeychain extends NativeVault {
+  constructor(options = {}) {
+    super('darwin', options);
+  }
+}
+
+export class WindowsVault extends NativeVault {
+  constructor(options = {}) {
+    super('win32', options);
+  }
+}
+
+export function credentialVault(options = {}) {
+  const platform = options.platform ?? process.platform;
+  if (platform === 'darwin') return new MacKeychain(options);
+  if (platform === 'win32') return new WindowsVault(options);
+  const unavailable = async () => {
+    throw new GogError('UNSUPPORTED_PLATFORM', 'This tool supports macOS and Windows.', 7);
+  };
+  return { storage: 'unsupported', get: unavailable, set: unavailable, remove: unavailable };
 }

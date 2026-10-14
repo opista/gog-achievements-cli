@@ -15,7 +15,13 @@ export function requireValue(condition, code, message, exitCode = 2, details) {
 export function errorResult(error) {
   if (!(error instanceof GogError)) {
     // Fetch, process and filesystem errors can contain credentials or URLs.
-    return { ok: false, error: { code: 'INTERNAL_ERROR', message: 'The command failed. No account change was confirmed.' } };
+    return {
+      ok: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'The command failed. No account change was confirmed.',
+      },
+    };
   }
   return {
     ok: false,

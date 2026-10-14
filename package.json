@@ -1,20 +1,50 @@
 {
   "name": "gog-achievements-cli",
-  "version": "0.1.0",
-  "description": "Mac GOG achievement restoration with JSON commands and saved queues",
+  "version": "0.2.0",
+  "description": "GOG achievement restoration for macOS and Windows, with JSON commands and saved queues",
   "type": "module",
   "private": true,
-  "engines": { "node": ">=22" },
-  "bin": { "gog-achievements": "bin/gog-achievements.mjs" },
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "gog-achievements": "bin/gog-achievements.mjs"
+  },
   "exports": "./src/index.mjs",
-  "files": ["bin", "src", "native/bin/gog-login", "native/gog-login.swift", "scripts/build-native.mjs", "README.md", "LICENSE"],
-  "dependencies": { "@napi-rs/keyring": "2.1.1" },
+  "files": [
+    "bin",
+    "src",
+    "native/bin",
+    "native/gog-login.swift",
+    "native/windows",
+    "scripts",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "global.json",
+    "licenses",
+    "native/launcher.c"
+  ],
   "scripts": {
     "start": "node bin/gog-achievements.mjs",
-    "test": "node --test --test-timeout=15000 test/*.test.mjs",
-    "check": "node scripts/check.mjs",
+    "test": "node scripts/test.mjs",
+    "check": "node scripts/check.mjs && npm run lint && npm run format:check",
     "demo": "node scripts/demo.mjs",
-    "build:mac": "node scripts/build-native.mjs"
+    "build": "node scripts/build.mjs",
+    "lint": "eslint .",
+    "format:check": "prettier --check . --ignore-unknown",
+    "format": "prettier --write . --ignore-unknown",
+    "test:coverage": "node scripts/test.mjs --coverage"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "eslint": "10.12.0",
+    "postject": "1.0.0-alpha.6",
+    "prettier": "3.9.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metacurb/gog-achievements-cli.git"
+  }
 }
