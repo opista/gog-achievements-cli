@@ -52,8 +52,14 @@ internal static class LoginProtocol
         return new(url, state, timeout);
     }
 
-    internal static bool Allowed(string url) => url == "about:blank" ||
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.UserInfo.Length == 0 && Hosts.Contains(uri.Host);
+    internal static bool Allowed(string url, bool isMainFrame = true)
+    {
+        if (url == "about:blank") return true;
+        // Turnstile uses embedded documents; only GOG may own the main login page.
+        if (!isMainFrame && url == "about:srcdoc") return true;
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == "https" &&
+            (!isMainFrame || uri.UserInfo.Length == 0 && Hosts.Contains(uri.Host));
+    }
 
     internal static Dictionary<string, object?> SelfTest()
     {
@@ -89,7 +95,28 @@ internal static class LoginProtocol
             try { ParseConfig(data.RootElement); return item.Item4; }
             catch { return !item.Item4; }
         });
-        var allChecks = checks.Concat(configChecks).ToArray();
+        var navigationCases = new[] {
+            ("https://auth.gog.com/auth", true, true),
+            ("https://login.gog.com/auth", true, true),
+            ("https://embed.gog.com/", true, true),
+            ("https://www.gog.com/", true, true),
+            ("https://attacker.example/", true, false),
+            ("https://challenges.cloudflare.com/", true, false),
+            ("https://challenges.cloudflare.com/", false, true),
+            ("about:blank", true, true),
+            ("about:blank", false, true),
+            ("about:srcdoc", true, false),
+            ("about:srcdoc", false, true),
+            ("about:srcdoc#other", false, false),
+            ("about:blank?other", false, false),
+            ("http://auth.gog.com/auth", true, false),
+            ("http://challenges.cloudflare.com/", false, false),
+            ("file:///tmp/login.html", false, false),
+            ("javascript:void(0)", false, false),
+            ("data:text/html,login", false, false)
+        };
+        var navigationChecks = navigationCases.Select(item => Allowed(item.Item1, item.Item2) == item.Item3);
+        var allChecks = checks.Concat(configChecks).Concat(navigationChecks).ToArray();
         return new() { ["self_test_passed"] = allChecks.All(value => value), ["checks"] = allChecks.Length };
     }
 }

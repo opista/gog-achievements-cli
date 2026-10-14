@@ -39,6 +39,13 @@ func vault(_ config: [String: Any]) -> [String: Any] {
 let registeredRedirect = "https://embed.gog.com/on_login_success?origin=client"
 let gogHosts: Set<String> = ["auth.gog.com", "login.gog.com", "embed.gog.com", "www.gog.com"]
 
+func allowsNavigation(_ url: URL, isMainFrame: Bool) -> Bool {
+    if url.absoluteString == "about:blank" { return true }
+    // Turnstile uses embedded documents; only GOG may own the main login page.
+    if !isMainFrame && url.absoluteString == "about:srcdoc" { return true }
+    return url.scheme == "https" && (!isMainFrame || gogHosts.contains(url.host ?? ""))
+}
+
 struct Callback {
     let code: String?
     let state: String?
@@ -124,7 +131,30 @@ if CommandLine.arguments.dropFirst() == ["--self-test"] {
         base.merging(["login_url": login.replacingOccurrences(of: "auth.gog.com", with: "user@auth.gog.com")]) { _, new in new },
         base.merging(["login_url": login.replacingOccurrences(of: "auth.gog.com", with: "auth.gog.com:443")]) { _, new in new }
     ]
-    let checks = validConfigs.map { parseConfig($0) != nil } + invalidConfigs.map { parseConfig($0) == nil } + [
+    let navigationCases: [(String, Bool, Bool)] = [
+        ("https://auth.gog.com/auth", true, true),
+        ("https://login.gog.com/auth", true, true),
+        ("https://embed.gog.com/", true, true),
+        ("https://www.gog.com/", true, true),
+        ("https://attacker.example/", true, false),
+        ("https://challenges.cloudflare.com/", true, false),
+        ("https://challenges.cloudflare.com/", false, true),
+        ("about:blank", true, true),
+        ("about:blank", false, true),
+        ("about:srcdoc", true, false),
+        ("about:srcdoc", false, true),
+        ("about:srcdoc#other", false, false),
+        ("about:blank?other", false, false),
+        ("http://auth.gog.com/auth", true, false),
+        ("http://challenges.cloudflare.com/", false, false),
+        ("file:///tmp/login.html", false, false),
+        ("javascript:void(0)", false, false),
+        ("data:text/html,login", false, false)
+    ]
+    let navigationChecks = navigationCases.map { url, isMainFrame, expected in
+        allowsNavigation(URL(string: url)!, isMainFrame: isMainFrame) == expected
+    }
+    let checks = navigationChecks + validConfigs.map { parseConfig($0) != nil } + invalidConfigs.map { parseConfig($0) == nil } + [
         readCallback(valid, expectedState: state)?.code == "test-code",
         readCallback(URL(string: registeredRedirect + "&code=test-code")!, expectedState: state)?.code == "test-code",
         readCallback(URL(string: registeredRedirect + "&code=test-code&state=wrong")!, expectedState: state)?.error == "INVALID_LOGIN_STATE",
@@ -196,8 +226,7 @@ final class LoginController: NSObject, WKNavigationDelegate, WKUIDelegate, NSWin
             _ = capture(url)
             return
         }
-        let allowed = url.scheme == "https" && (!isMain || gogHosts.contains(url.host ?? "")) || url.absoluteString == "about:blank"
-        decisionHandler(allowed ? .allow : .cancel)
+        decisionHandler(allowsNavigation(url, isMainFrame: isMain) ? .allow : .cancel)
     }
 
     func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
