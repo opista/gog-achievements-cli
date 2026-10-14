@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { spawnSync } from 'node:child_process';
 import { runCLI } from '../src/cli.mjs';
+import { formatOutput } from '../src/output.mjs';
 import { MacKeychain } from '../src/keychain.mjs';
 import { fixture, GAME_ID, ACHIEVEMENT_ID, DATE } from './fixture.mjs';
 
@@ -38,14 +39,94 @@ test('manual login remains available and invalid wait limits do not open a brows
   }
 });
 
-test('the executable emits exactly one JSON object and a useful failure exit code', () => {
+test('--json emits exactly one JSON object and keeps failure exit codes', () => {
   for (const [args, expected] of [[['--help'], 0], [['unknown-command'], 2], [['queue', 'apply', '--yes'], 2]]) {
-    const child = spawnSync(process.execPath, ['bin/gog-achievements.mjs', ...args], { encoding: 'utf8', timeout: 5000 });
+    const child = spawnSync(process.execPath, ['bin/gog-achievements.mjs', ...args, '--json'], { encoding: 'utf8', timeout: 5000 });
     assert.equal(child.status, expected);
     assert.equal(child.stderr, '');
     assert.equal(child.stdout.trim().split('\n').length, 1);
     assert.equal(typeof JSON.parse(child.stdout).ok, 'boolean');
   }
+});
+
+test('default help is readable and default errors use stderr', () => {
+  const help = spawnSync(process.execPath, ['bin/gog-achievements.mjs', '--help'], { encoding: 'utf8', timeout: 5000 });
+  assert.equal(help.status, 0);
+  assert.equal(help.stderr, '');
+  assert.match(help.stdout, /Usage:\n/);
+  assert.match(help.stdout, /Browse:\n/);
+  assert.match(help.stdout, /--json --pretty/);
+  assert.ok(!help.stdout.includes('"commands"'));
+  const failure = spawnSync(process.execPath, ['bin/gog-achievements.mjs', 'unknown-command'], { encoding: 'utf8', timeout: 5000 });
+  assert.equal(failure.status, 2);
+  assert.equal(failure.stdout, '');
+  assert.match(failure.stderr, /Error \[UNKNOWN_COMMAND\]/);
+});
+
+test('command and group help need no credentials and show required flags', async () => {
+  const service = new Proxy({}, { get() { throw new Error('Help must not access a service'); } });
+  for (const args of [['achievements', 'list', '--help'], ['help', 'achievements', 'list'], ['achievements', 'list', '-h']]) {
+    const outcome = await runCLI(args, { service });
+    assert.equal(outcome.exitCode, 0);
+    assert.match(formatOutput(outcome), /--game GAME_ID.*GOG game ID.*Required\./);
+    assert.ok(!formatOutput(outcome).includes('auth login'));
+    assert.deepEqual(outcome.result.data.commands.map(spec => spec.command), ['achievements list']);
+  }
+  const group = await runCLI(['queue', '--help', '--json'], { service });
+  assert.equal(group.exitCode, 0);
+  assert.ok(group.result.data.commands.every(spec => spec.command.startsWith('queue ')));
+  const unknown = await runCLI(['secret-unknown', '--help', '--json'], { service });
+  assert.equal(unknown.exitCode, 2);
+  assert.ok(!formatOutput(unknown).includes('secret-unknown'));
+});
+
+test('--pretty keeps text and --json --pretty indents the same machine result', async () => {
+  const deps = { service: { authStatus: async () => ({ authenticated: false, storage: 'macos_keychain' }) } };
+  const plain = await runCLI(['auth', 'status'], deps);
+  const pretty = await runCLI(['auth', 'status', '--pretty'], deps);
+  const compact = await runCLI(['auth', 'status', '--json'], deps);
+  const indented = await runCLI(['auth', 'status', '--json', '--pretty'], deps);
+  assert.equal(formatOutput(plain), formatOutput(pretty));
+  assert.equal(formatOutput(compact).trim().split('\n').length, 1);
+  assert.match(formatOutput(indented), /\n  "ok": true,/);
+  assert.deepEqual(JSON.parse(formatOutput(compact)), JSON.parse(formatOutput(indented)));
+  const child = spawnSync(process.execPath, ['bin/gog-achievements.mjs', '--help', '--json', '--pretty'], { encoding: 'utf8', timeout: 5000 });
+  assert.equal(child.status, 0);
+  assert.equal(child.stderr, '');
+  assert.ok(JSON.parse(child.stdout).data.commands.length > 1);
+});
+
+test('readable tables retain full IDs and strip remote terminal control sequences', async () => {
+  const f = fixture();
+  const games = await runCLI(['games', 'list'], { service: f.service });
+  assert.match(formatOutput(games), /1 owned game/);
+  assert.ok(formatOutput(games).includes(GAME_ID));
+  f.achievements[0].name = '\u001b[31mEarned\u001b[0m\r\nmissing';
+  const outcome = await runCLI(['achievements', 'list', '--game', GAME_ID], { service: f.service });
+  for (const columns of [50, 100]) {
+    const output = formatOutput(outcome, { columns });
+    assert.ok(output.includes(ACHIEVEMENT_ID));
+    assert.match(output, /0 unlocked, 2 locked/);
+    assert.ok(!output.includes('\u001b'));
+    assert.ok(!output.includes('\r'));
+    assert.ok(!output.includes('fake-account'));
+  }
+  const json = formatOutput({ ...outcome, format: 'json' });
+  assert.equal(JSON.parse(json).data.achievements[0].id, ACHIEVEMENT_ID);
+  assert.equal(JSON.parse(json).data.achievements[0].name, f.achievements[0].name);
+  const empty = formatOutput({ ...games, result: { ok: true, data: { ...games.result.data, count: 0, games: [] } } });
+  assert.equal(empty, 'No games found.\n');
+});
+
+test('readable unlock dates use UTC while JSON retains the server value', async () => {
+  const f = fixture();
+  f.achievements[0].date_unlocked = '2026-01-01T13:34:56+01:00';
+  const outcome = await runCLI(['achievements', 'list', '--game', GAME_ID], { service: f.service });
+  assert.match(formatOutput(outcome), /1 unlocked, 1 locked/);
+  assert.match(formatOutput(outcome), /2026-01-01 12:34:56/);
+  assert.ok(!formatOutput(outcome).includes('13:34:56'));
+  assert.equal(JSON.parse(formatOutput({ ...outcome, format: 'json' })).data.achievements[0].unlocked_at,
+    '2026-01-01T13:34:56+01:00');
 });
 
 test('unknown and misplaced flags are rejected without using credentials', async () => {
@@ -83,6 +164,28 @@ test('partial apply returns exit 6 with the per-achievement report', async t => 
   assert.equal(result.exitCode, 6);
   assert.equal(result.result.ok, false);
   assert.equal(result.result.error.details.report.results[0].status, 'failed');
+  const readable = formatOutput(result);
+  assert.match(readable, /Error \[APPLY_INCOMPLETE\]/);
+  assert.match(readable, /Apply incomplete: Cyberpunk 2077/);
+  assert.match(readable, /Failed: Earned but missing/);
+  assert.ok(readable.includes(ACHIEVEMENT_ID));
+  assert.match(readable, /Error: API_REJECTED/);
+});
+
+test('readable queues and previews show selected dates without writes', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'gog-cli-output-test-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const file = join(directory, 'queue.json');
+  const f = fixture();
+  const created = await runCLI(['queue', 'create', '--game', GAME_ID, '--file', file, '--achievement', ACHIEVEMENT_ID, '--unlocked-at', DATE], { service: f.service });
+  assert.match(formatOutput(created), /Queue created: Cyberpunk 2077/);
+  assert.ok(formatOutput(created).includes(file));
+  assert.match(formatOutput(created), /2026-01-01 12:34:56/);
+  const preview = await runCLI(['queue', 'apply', '--file', file], { service: f.service });
+  assert.match(formatOutput(preview), /Queue preview: Cyberpunk 2077/);
+  assert.match(formatOutput(preview), /Would unlock: Earned but missing/);
+  assert.match(formatOutput(preview), /Preview only\. No achievements were changed\./);
+  assert.equal(f.writes.length, 0);
 });
 
 test('login stdin and clipboard inputs stay out of command results', async () => {

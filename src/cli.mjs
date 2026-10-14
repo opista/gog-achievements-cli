@@ -4,40 +4,8 @@ import { GogError, errorResult, requireValue } from './errors.mjs';
 import { readQueue, saveQueue, withQueueLock, id } from './data.mjs';
 import { runProcess } from './keychain.mjs';
 import { loginWithNativeWindow } from './native-login.mjs';
-
-const COMMANDS = {
-  'auth login': { flags: ['no-open', 'timeout'], description: 'Open a Mac GOG sign-in window, capture its registered callback, and save login. --timeout is seconds (default 180).' },
-  'auth finish': { flags: ['stdin', 'clipboard'], description: 'Read the final login URL or code and save login in Mac Keychain.' },
-  'auth import': { flags: ['stdin'], description: 'Import a refresh token through stdin. Never put a token in an argument.' },
-  'auth status': { flags: [], description: 'Read local login status without revealing tokens.' },
-  'auth logout': { flags: [], description: 'Remove this tool\'s local login from Mac Keychain.' },
-  'games list': { flags: ['search', 'ids-only'], description: 'List owned GOG games, with optional title search.' },
-  'achievements list': { flags: ['game'], required: ['game'], description: 'List all achievements and current unlock dates for an owned game.' },
-  'queue create': { flags: ['file', 'game', 'achievement', 'unlocked-at'], required: ['file', 'game'], description: 'Create a queue file. Achievement flags can be repeated.' },
-  'queue add': { flags: ['file', 'achievement', 'unlocked-at'], required: ['file', 'achievement'], description: 'Add locked achievements to a queue.' },
-  'queue remove': { flags: ['file', 'achievement'], required: ['file', 'achievement'], description: 'Remove selected achievements from a queue.' },
-  'queue set-date': { flags: ['file', 'achievement', 'unlocked-at'], required: ['file', 'achievement', 'unlocked-at'], description: 'Change the date of selected queued achievements.' },
-  'queue show': { flags: ['file'], required: ['file'], description: 'Read a queue without network access.' },
-  'queue apply': { flags: ['file', 'yes', 'dry-run'], required: ['file'], description: 'Preview by default. Use --yes to write and verify the queue.' },
-  doctor: { flags: [], description: 'Check Node, Mac and local login availability.' },
-};
-
-export const HELP = {
-  name: 'gog-achievements', version: '0.1.0', output: 'JSON on stdout; no interactive prompts; IDs are decimal strings.',
-  commands: Object.entries(COMMANDS).map(([name, spec]) => ({ command: name, ...spec })),
-  common_flags: ['--json (default)', '--pretty', '--help'],
-  exit_codes: { 0: 'success', 2: 'invalid input or queue file', 3: 'login required or rejected',
-    4: 'network or API response failure', 5: 'ownership, account, queue lock or game conflict', 6: 'apply incomplete', 7: 'Mac Keychain or process failure' },
-  examples: [
-    'gog-achievements auth login',
-    'gog-achievements games list --search Cyberpunk',
-    'gog-achievements achievements list --game GAME_ID',
-    'gog-achievements queue create --game GAME_ID --file queue.json --achievement ACHIEVEMENT_ID',
-    'gog-achievements queue set-date --file queue.json --achievement ACHIEVEMENT_ID --unlocked-at 2026-10-01T18:30:00+01:00',
-    'gog-achievements queue apply --file queue.json --dry-run',
-    'gog-achievements queue apply --file queue.json --yes',
-  ],
-};
+import { COMMANDS, commandHelp } from './help.mjs';
+export { HELP } from './help.mjs';
 
 async function readStdin(input) {
   requireValue(!input.isTTY, 'STDIN_REQUIRED', 'Pipe the login value through stdin. The CLI will not prompt.');
@@ -59,11 +27,14 @@ async function readStdin(input) {
 export async function runCLI(args, { service = new GogAchievements(), stdin = process.stdin, stderr = process.stderr,
   execute = runProcess, platform = process.platform, nativeLogin = loginWithNativeWindow } = {}) {
   let pretty = args.includes('--pretty');
+  let format = args.includes('--json') ? 'json' : 'text';
+  let command;
+  let file;
   try {
     let parsed;
     try {
       parsed = parseArgs({ args, allowPositionals: true, strict: true, options: {
-        help: { type: 'boolean' }, pretty: { type: 'boolean' }, json: { type: 'boolean' },
+        help: { type: 'boolean', short: 'h' }, pretty: { type: 'boolean' }, json: { type: 'boolean' },
         game: { type: 'string' }, file: { type: 'string' }, search: { type: 'string' },
         achievement: { type: 'string', multiple: true }, 'unlocked-at': { type: 'string' },
         stdin: { type: 'boolean' }, clipboard: { type: 'boolean' }, 'no-open': { type: 'boolean' },
@@ -73,12 +44,17 @@ export async function runCLI(args, { service = new GogAchievements(), stdin = pr
     } catch { throw new GogError('INVALID_ARGUMENTS', 'Invalid command arguments. Run --help for the command list.', 2); }
     const { values: flags, positionals } = parsed;
     pretty = !!flags.pretty;
-    if (flags.help || !positionals.length || (positionals.length === 1 && positionals[0] === 'help')) {
-      return { exitCode: 0, pretty, result: { ok: true, data: HELP } };
+    format = flags.json ? 'json' : 'text';
+    const topic = (positionals[0] === 'help' ? positionals.slice(1) : positionals).join(' ');
+    if (flags.help || !positionals.length || positionals[0] === 'help' || ['auth', 'games', 'achievements', 'queue'].includes(topic)) {
+      const data = commandHelp(topic);
+      requireValue(data, 'UNKNOWN_COMMAND', 'Unknown command. Run --help for the command list.');
+      return { exitCode: 0, pretty, format, command: 'help', result: { ok: true, data } };
     }
-    const command = positionals.join(' ');
-    const spec = COMMANDS[command];
+    const spec = COMMANDS[topic];
     requireValue(spec, 'UNKNOWN_COMMAND', 'Unknown command. Run --help for the command list.');
+    command = topic;
+    file = flags.file;
     requireValue(Object.keys(flags).every(key => ['pretty', 'json'].includes(key) || spec.flags.includes(key)),
       'INVALID_ARGUMENTS', 'One or more flags are not valid for this command.');
     requireValue((spec.required ?? []).every(key => typeof flags[key] === 'string' ? flags[key].trim() : flags[key]?.length),
@@ -149,8 +125,8 @@ export async function runCLI(args, { service = new GogAchievements(), stdin = pr
         await saveQueue(flags.file, data);
       });
     }
-    return { exitCode: 0, pretty, result: { ok: true, data } };
+    return { exitCode: 0, pretty, format, command, file, result: { ok: true, data } };
   } catch (error) {
-    return { exitCode: error instanceof GogError ? error.exitCode : 4, pretty, result: errorResult(error) };
+    return { exitCode: error instanceof GogError ? error.exitCode : 4, pretty, format, command, file, result: errorResult(error) };
   }
 }

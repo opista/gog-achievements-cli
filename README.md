@@ -1,6 +1,6 @@
 # GOG Achievements CLI
 
-A small Mac CLI for restoring GOG achievements you already earned. It returns JSON for use by AI tools and has a shared Node core for a later Electron app.
+A small Mac CLI for restoring GOG achievements you already earned. It shows readable text by default, supports JSON for AI tools and scripts, and has a shared Node core for a later Electron app.
 
 ## Setup
 
@@ -11,10 +11,35 @@ cd /Users/beau/Documents/projects/gog-achievements-cli
 npm ci --ignore-scripts
 npm run build:mac
 node bin/gog-achievements.mjs doctor
-node bin/gog-achievements.mjs --help --pretty
+node bin/gog-achievements.mjs --help
 ```
 
 Use `node bin/gog-achievements.mjs` below, or install a local command with `npm install --global . --ignore-scripts`.
+
+## Help and output
+
+```sh
+node bin/gog-achievements.mjs --help
+node bin/gog-achievements.mjs achievements list --help
+node bin/gog-achievements.mjs queue --help
+```
+
+Help lists commands in groups. Command help shows its options, required flags and examples. `-h` and `help <command>` also work.
+
+| Flags | Output |
+|---|---|
+| No output flags | Readable summaries and tables. |
+| `--pretty` | Readable text, the same as the default. |
+| `--json` | One compact JSON object for AI tools and scripts. |
+| `--json --pretty` | The same JSON with indentation. |
+
+```sh
+node bin/gog-achievements.mjs games list
+node bin/gog-achievements.mjs games list --json
+node bin/gog-achievements.mjs games list --json --pretty
+```
+
+Text is the default in terminals and pipes. AI tools and scripts must pass `--json`; output does not switch format based on terminal detection. Existing scripts that used the earlier JSON default need this flag. Text errors go to stderr. JSON errors stay on stdout so a script can parse every result.
 
 ## Sign in
 
@@ -22,9 +47,9 @@ Use `node bin/gog-achievements.mjs` below, or install a local command with `npm 
 node bin/gog-achievements.mjs auth login
 ```
 
-Complete sign-in in the **Sign in to GOG** Mac window that opens. The same command captures GOG's registered callback, closes the window, saves your login in Mac Keychain and returns `authenticated: true`. It requires no copied URL or second command. The window uses an in-memory web session; its cookies and history are not saved.
+Complete sign-in in the **Sign in to GOG** Mac window that opens. The same command captures GOG's registered callback, closes the window, saves your login in Mac Keychain and confirms sign-in. With `--json`, it returns `authenticated: true`. It requires no copied URL or second command. The window uses an in-memory web session; its cookies and history are not saved.
 
-The command waits up to three minutes for sign-in. Use `auth login --timeout 300` to allow five minutes. Close the window or press Ctrl+C to cancel. Progress appears on stderr; stdout contains the final JSON result.
+The command waits up to three minutes for sign-in. Use `auth login --timeout 300` to allow five minutes. Close the window or press Ctrl+C to cancel. Progress appears on stderr; stdout contains the final result.
 
 GOG's Galaxy OAuth client rejects local callback URLs with `redirect_uri_mismatch`. The native window keeps the registered GOG redirect URL and intercepts it inside WebKit. It captures only the GOG callback in the main window and validates OAuth state when GOG returns it.
 
@@ -43,13 +68,15 @@ Credentials stay in the `gog-achievements-cli` entry in Mac Keychain. Commands, 
 ## Find your game and achievements
 
 ```sh
-node bin/gog-achievements.mjs games list --search Cyberpunk --pretty
-node bin/gog-achievements.mjs achievements list --game 1423049311 --pretty
+node bin/gog-achievements.mjs games list --search Cyberpunk
+node bin/gog-achievements.mjs achievements list --game 1423049311
 ```
 
 Game IDs, client IDs, user IDs and achievement IDs are strings. GOG uses IDs larger than JavaScript's safe integer range; keep them as strings when editing files or calling the shared core.
 
 `games list` reads every library page. `games list --ids-only` uses the quick owned-ID endpoint without titles. `achievements list` checks ownership and reads the game's achievement list, including hidden entries and unlock dates.
+
+Text shows achievement names, full IDs, lock status and UTC dates. Add `--json` for descriptions and all other fields.
 
 ## Create and edit a queue
 
@@ -59,7 +86,7 @@ Replace `ACHIEVEMENT_ID` with an ID from the achievement list. Repeating `--achi
 node bin/gog-achievements.mjs queue create --game 1423049311 --file queue.json
 node bin/gog-achievements.mjs queue add --file queue.json --achievement ACHIEVEMENT_ID
 node bin/gog-achievements.mjs queue set-date --file queue.json --achievement ACHIEVEMENT_ID --unlocked-at 2026-10-01T18:30:00+01:00
-node bin/gog-achievements.mjs queue show --file queue.json --pretty
+node bin/gog-achievements.mjs queue show --file queue.json
 node bin/gog-achievements.mjs queue remove --file queue.json --achievement ACHIEVEMENT_ID
 ```
 
@@ -87,8 +114,8 @@ The IDs in a real queue must be positive decimal strings. The CLI rejects unknow
 ## Preview and apply
 
 ```sh
-node bin/gog-achievements.mjs queue apply --file queue.json --dry-run --pretty
-node bin/gog-achievements.mjs queue apply --file queue.json --yes --pretty
+node bin/gog-achievements.mjs queue apply --file queue.json --dry-run
+node bin/gog-achievements.mjs queue apply --file queue.json --yes
 ```
 
 Without `--yes`, apply is a preview. It checks the whole queue, game ownership, account and live achievement keys before a write. During apply it reads each achievement again before writing and skips achievements that are already unlocked. Keep the game closed during apply: the GOG API does not offer an atomic compare-and-set operation.
@@ -105,11 +132,11 @@ Apply uses game-scoped authentication, writes each selected date, and reads the 
 | `unconfirmed` | The write or readback could not be confirmed. Check the live state. |
 | `not_attempted` | Apply stopped before this item was written. |
 
-Exit 6 returns the full report under `error.details.report`. Inspect it before retrying. A retry skips existing unlocks; it does not edit their dates.
+Exit 6 shows the full report in text mode or under `error.details.report` in JSON mode. Inspect it before retrying. A retry skips existing unlocks; it does not edit their dates.
 
 ## Machine contract
 
-Every command returns one JSON object on stdout, with no prompts or diagnostic text mixed into it. `--pretty` adds indentation; `--json` is accepted and is the default.
+With `--json`, every command returns one JSON object on stdout, with no prompts or diagnostic text mixed into it. Add `--pretty` to indent the JSON. The success and error envelopes, string IDs, queue schema and exit codes are unchanged.
 
 ```json
 { "ok": true, "data": {} }
@@ -164,7 +191,7 @@ npm run demo
 
 `demo` uses fixture data and prints the complete CLI flow. It makes no requests to GOG and does not access your login.
 
-Verified on this Mac: CLI execution, long-session native Keychain round trip, native one-command GOG sign-in, authenticated Cyberpunk library and achievement reads, public Cyberpunk GOGDB metadata, 36 automated CLI tests, and 8 native callback checks. A real achievement write still needs a selected earned achievement.
+Verified on this Mac: CLI execution, long-session native Keychain round trip, native one-command GOG sign-in, authenticated Cyberpunk library and achievement reads, public Cyberpunk GOGDB metadata, automated CLI tests, and 8 native callback checks. A real achievement write still needs a selected earned achievement.
 
 GOG's gameplay request accepts a `date_unlocked` field in the referenced tools. This implementation supports that field and checks the returned date, but server date limits are not verified on a real account. It does not change dates on already unlocked achievements or edit game statistics. The tool restores platform records; it does not repair the game's future achievement triggers.
 
