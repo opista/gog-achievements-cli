@@ -3,10 +3,10 @@ import { GogAchievements } from './service.mjs';
 import { GogError, errorResult, requireValue } from './errors.mjs';
 import { readQueue, saveQueue, withQueueLock, id } from './data.mjs';
 import { runProcess } from './keychain.mjs';
-import { loginWithBrowser } from './browser-login.mjs';
+import { loginWithNativeWindow } from './native-login.mjs';
 
 const COMMANDS = {
-  'auth login': { flags: ['no-open', 'timeout'], description: 'Open GOG sign-in, wait for the browser callback, and save login. --timeout is seconds (default 180).' },
+  'auth login': { flags: ['no-open', 'timeout'], description: 'Open a Mac GOG sign-in window, capture its registered callback, and save login. --timeout is seconds (default 180).' },
   'auth finish': { flags: ['stdin', 'clipboard'], description: 'Read the final login URL or code and save login in Mac Keychain.' },
   'auth import': { flags: ['stdin'], description: 'Import a refresh token through stdin. Never put a token in an argument.' },
   'auth status': { flags: [], description: 'Read local login status without revealing tokens.' },
@@ -57,7 +57,7 @@ async function readStdin(input) {
 }
 
 export async function runCLI(args, { service = new GogAchievements(), stdin = process.stdin, stderr = process.stderr,
-  execute = runProcess, platform = process.platform, browserLogin = loginWithBrowser } = {}) {
+  execute = runProcess, platform = process.platform, nativeLogin = loginWithNativeWindow } = {}) {
   let pretty = args.includes('--pretty');
   try {
     let parsed;
@@ -91,7 +91,7 @@ export async function runCLI(args, { service = new GogAchievements(), stdin = pr
       requireValue(Number.isInteger(timeout) && timeout >= 10 && timeout <= 600,
         'INVALID_LOGIN_TIMEOUT', '--timeout must be a number of seconds from 10 to 600.');
       if (flags['no-open']) {
-        requireValue(flags.timeout === undefined, 'INVALID_ARGUMENTS', '--timeout applies to automatic browser sign-in.');
+        requireValue(flags.timeout === undefined, 'INVALID_ARGUMENTS', '--timeout applies to automatic sign-in.');
         data = { authenticated: false, action_required: 'complete_manual_browser_login', browser_opened: false,
           login_url: service.loginURL(), next_command: 'node bin/gog-achievements.mjs auth finish --clipboard',
           instructions: 'Open the URL, complete GOG sign-in, copy the final redirected URL, then run the next command locally.' };
@@ -102,9 +102,8 @@ export async function runCLI(args, { service = new GogAchievements(), stdin = pr
         process.once('SIGINT', onInterrupt);
         process.once('SIGTERM', onInterrupt);
         try {
-          data = await browserLogin({ service, timeoutMs: timeout * 1000, signal: abort.signal,
-            progress: message => stderr.write(`${message}\n`),
-            openBrowser: async url => (await execute('/usr/bin/open', [url])).code === 0 });
+          data = await nativeLogin({ service, timeoutMs: timeout * 1000, signal: abort.signal,
+            progress: message => stderr.write(`${message}\n`) });
         } finally {
           process.removeListener('SIGINT', onInterrupt);
           process.removeListener('SIGTERM', onInterrupt);

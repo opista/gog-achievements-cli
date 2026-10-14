@@ -1,5 +1,5 @@
 export { GogAPI, LOGIN_URL, LOGIN_REDIRECT, buildLoginURL } from './api.mjs';
-export { loginWithBrowser } from './browser-login.mjs';
+export { loginWithNativeWindow } from './native-login.mjs';
 export { GogAchievements } from './service.mjs';
 export { MacKeychain } from './keychain.mjs';
 export { GogError } from './errors.mjs';

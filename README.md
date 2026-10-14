@@ -4,11 +4,12 @@ A small Mac CLI for restoring GOG achievements you already earned. It returns JS
 
 ## Setup
 
-Requires Node 22 or later and an unlocked Mac login Keychain. The Keychain package includes Apple Silicon and Intel builds.
+Requires Node 22 or later and an unlocked Mac login Keychain. The Keychain package includes Apple Silicon and Intel builds. Building the native sign-in helper from source requires Xcode Command Line Tools; the bundled helper needs no compiler at runtime. The helper is already built in this local project.
 
 ```sh
 cd /Users/beau/Documents/projects/gog-achievements-cli
 npm ci --ignore-scripts
+npm run build:mac
 node bin/gog-achievements.mjs doctor
 node bin/gog-achievements.mjs --help --pretty
 ```
@@ -21,9 +22,11 @@ Use `node bin/gog-achievements.mjs` below, or install a local command with `npm 
 node bin/gog-achievements.mjs auth login
 ```
 
-Complete sign-in in the browser that opens. The same command receives the login code, saves your login in Mac Keychain and returns `authenticated: true`. It requires no copied URL or second command. The browser displays **Signed in** when the login is saved.
+Complete sign-in in the **Sign in to GOG** Mac window that opens. The same command captures GOG's registered callback, closes the window, saves your login in Mac Keychain and returns `authenticated: true`. It requires no copied URL or second command. The window uses an in-memory web session; its cookies and history are not saved.
 
-The command waits up to three minutes for browser sign-in. Use `auth login --timeout 300` to allow five minutes. Press Ctrl+C to cancel. The temporary callback listens only on `127.0.0.1`, checks OAuth state and closes when the command ends. Progress appears on stderr; stdout contains the final JSON result.
+The command waits up to three minutes for sign-in. Use `auth login --timeout 300` to allow five minutes. Close the window or press Ctrl+C to cancel. Progress appears on stderr; stdout contains the final JSON result.
+
+GOG's Galaxy OAuth client rejects local callback URLs with `redirect_uri_mismatch`. The native window keeps the registered GOG redirect URL and intercepts it inside WebKit. It captures only the GOG callback in the main window and validates OAuth state when GOG returns it.
 
 You can check the saved login with:
 
@@ -126,7 +129,7 @@ Every command returns one JSON object on stdout, with no prompts or diagnostic t
 | 6 | Apply incomplete; read the per-achievement report. |
 | 7 | Mac Keychain or local process failure. |
 
-HTTP requests have a 15 second timeout; Keychain operations have a 5 second cancellation signal. Automatic login waits up to 180 seconds for the browser response by default, then uses the normal API and Keychain limits. Manual login stdin waits at most 30 seconds. The CLI rejects redirects for API requests and does not print raw server bodies, tokens or credential URLs in errors.
+HTTP requests have a 15 second timeout; Keychain operations have a 5 second cancellation signal. Automatic login waits up to 180 seconds for the window response by default, then uses the normal API and Keychain limits. Manual login stdin waits at most 30 seconds. The CLI rejects redirects for API requests and does not print raw server bodies, tokens or credential URLs in errors.
 
 ## Shared core and Electron phase
 

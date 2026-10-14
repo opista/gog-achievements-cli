@@ -14,16 +14,10 @@ test('auth login waits for automatic sign-in and returns the completed login', a
   const progress = [];
   const result = await runCLI(['auth', 'login', '--timeout', '120'], {
     service: f.service, platform: 'darwin', stderr: { write: message => progress.push(message) },
-    execute: async (command, args) => {
-      assert.equal(command, '/usr/bin/open');
-      assert.equal(new URL(args[0]).hostname, 'auth.gog.com');
-      return { code: 0 };
-    },
-    browserLogin: async options => {
+    nativeLogin: async options => {
       assert.equal(options.timeoutMs, 120000);
       options.progress('Complete sign-in.');
-      assert.equal(await options.openBrowser(f.service.loginURL()), true);
-      return { authenticated: true, user_id: '123', storage: 'macos_keychain', method: 'browser_callback' };
+      return { authenticated: true, user_id: '123', storage: 'macos_keychain', method: 'native_webview' };
     },
   });
   assert.equal(result.exitCode, 0);
