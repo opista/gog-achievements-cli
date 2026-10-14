@@ -14,26 +14,33 @@ Use `npm run build -- --target TARGET` to select `macos-arm64`, `macos-x64`, `wi
 
 ## Code map
 
-| File                        | Responsibility                                                      |
-| --------------------------- | ------------------------------------------------------------------- |
-| `src/cli.mts`               | Parse and validate commands.                                        |
-| `src/help.mts`              | Command definitions, flags and help.                                |
-| `src/output.mts`            | Human text and JSON rendering.                                      |
-| `src/service.mts`           | Account checks, queue planning and achievement restoration.         |
-| `src/api.mts`               | GOG requests, paging and response validation.                       |
-| `src/data.mts`              | String IDs, UTC dates, queue files and locks.                       |
-| `src/keychain.mts`          | Shared credential protocol with platform-specific storage settings. |
-| `src/native-login.mts`      | Capture native login results and validate OAuth state.              |
-| `src/process.mts`           | Private native IPC, cancellation, byte limits and deadlines.        |
-| `src/assets.mts`            | Load and verify bundled native helpers.                             |
-| `native/gog-login.swift`    | macOS WebKit sign-in and Keychain access.                           |
-| `native/windows/`           | Windows WebView2 sign-in and DPAPI storage.                         |
-| `scripts/build.mjs`         | Package and smoke-test the selected target's distribution.          |
-| `scripts/build-targets.mjs` | Shared target definitions and build argument validation.            |
+| File                                        | Responsibility                                                        |
+| ------------------------------------------- | --------------------------------------------------------------------- |
+| `src/index.mjs`, `src/index.mts`            | Compatible public exports and generated type declarations.            |
+| `src/cli.mts`, `src/service.mts`            | Compatible public facades and production dependency defaults.         |
+| `src/domain/values.mts`                     | Pure string ID and UTC date rules.                                    |
+| `src/domain/queue.mts`                      | Queue validation, selection and immutable edits.                      |
+| `src/domain/restoration.mts`                | Pure whole-queue restoration planning.                                |
+| `src/application/ports.mts`                 | API, credential, process and stream interfaces.                       |
+| `src/application/session.mts`               | Login, refresh, cached credentials and logout.                        |
+| `src/application/service.mts`               | Account checks and ordered restoration operations.                    |
+| `src/adapters/gog-api.mts`                  | HTTP requests, paging and response validation.                        |
+| `src/adapters/queue-files.mts`              | Atomic file operations and complete queue lock transactions.          |
+| `src/adapters/input.mts`                    | Stdin and clipboard access.                                           |
+| `src/adapters/native/`                      | Verified assets, private IPC, credential storage and login lifecycle. |
+| `src/cli/definitions.mts`                   | Shared command, flag and help definitions.                            |
+| `src/cli/parse.mts`, `src/cli/handlers.mts` | Typed parsing and dependency-injected command dispatch.               |
+| `src/cli/output.mts`                        | Pure text and JSON rendering.                                         |
+| `native/gog-login.swift`                    | macOS WebKit sign-in and Keychain access.                             |
+| `native/windows/`                           | Windows WebView2 sign-in and DPAPI storage.                           |
+| `scripts/build.mjs`                         | Package and smoke-test the selected target's distribution.            |
+| `scripts/build-targets.mjs`                 | Shared target definitions and build argument validation.              |
 
 The app compiler rejects JavaScript application imports. The build configuration includes checked JavaScript tooling so its declarations and emitted paths are available to tests. Keep boundary input `unknown` until validation. The fixture contract snapshots preserve the JavaScript baseline, including exact text/JSON, queue bytes and request order.
 
-Keep account operations in the service and HTTP details in the API. Output code must not perform network calls. Add tests for behaviour and failure paths; avoid tests that only copy an implementation.
+ESLint enforces the dependency direction: domain modules use other domain modules; application modules use domain functions and ports; adapters implement ports; CLI handlers receive operations as dependencies. The root facades and entry point supply production dependencies. Domain functions receive the current time explicitly and return new values. Parsing and output also stay free of host effects. Only the ports module uses Node type imports in the application layer; these imports produce no runtime dependency. Root re-export modules preserve existing source imports.
+
+Keep account operations in the application service and HTTP details in the API adapter. Keep the queue lock around the full command transaction, including remote apply operations. Add tests for behaviour and failure paths; avoid tests that only copy an implementation. Frozen-input tests check pure queue operations. Native login lifecycle tests check signal cancellation and listener cleanup. Compiler tests reject invalid command payloads, missing required parsed flags and mutation of domain input views.
 
 The CLI's stable contracts are string IDs, queue schema version 1, JSON envelopes, error codes and exit codes. Credentials travel only through private helper pipes and native protected storage. Preserve existing unlocks, preview by default, validate the whole queue before a write, and never automatically retry an achievement POST.
 
