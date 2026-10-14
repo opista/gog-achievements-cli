@@ -57,7 +57,7 @@ async function buildMac() {
           '-o',
           join(temporary, target),
         ],
-        { timeout: 30000, maxBuffer: 1_000_000 },
+        { timeout: 120000, maxBuffer: 1_000_000 },
       );
     }
     const helper = resolve('native/bin/gog-login');
