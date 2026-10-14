@@ -11,16 +11,16 @@ import {
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { distributionRuntime, sourceHelperPath } from './runtime-paths.mjs';
 import { GogError } from './errors.mjs';
 
 export function isPackaged() {
-  return isSea() || (typeof __GOG_DISTRIBUTION__ !== 'undefined' && __GOG_DISTRIBUTION__);
+  return isSea() || distributionRuntime();
 }
 
-const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
+const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
-function privateDirectory(path) {
+function privateDirectory(path: string) {
   mkdirSync(path, { recursive: true, mode: 0o700 });
   const stat = lstatSync(path);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error();
@@ -29,7 +29,7 @@ function privateDirectory(path) {
 
 // A stable, content-based path preserves Keychain identity. Check bytes on every
 // lookup so a replaced or corrupt cached helper cannot be executed.
-export function cacheNativeHelper(bytes, root, filename) {
+export function cacheNativeHelper(bytes: Uint8Array, root: string, filename: string) {
   try {
     privateDirectory(root);
     const checksum = digest(bytes);
@@ -63,11 +63,11 @@ export function cacheNativeHelper(bytes, root, filename) {
   }
 }
 
-export function nativeHelperPath(platform = process.platform) {
+export function nativeHelperPath(platform: string = process.platform) {
   if (!['darwin', 'win32'].includes(platform))
     throw new GogError('UNSUPPORTED_PLATFORM', 'This tool supports macOS and Windows.', 7);
   const name = platform === 'win32' ? 'gog-login.exe' : 'gog-login';
-  if (!isSea()) return fileURLToPath(new URL(`../native/bin/${name}`, import.meta.url));
+  if (!isSea()) return sourceHelperPath(name);
   const root =
     platform === 'darwin'
       ? join(homedir(), 'Library', 'Caches', 'gog-achievements-cli')

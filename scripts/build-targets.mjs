@@ -1,10 +1,12 @@
+/** @typedef {{name: string, platform: string, architecture: string}} BuildTarget */
+/** @type {readonly Readonly<BuildTarget>[]} */
 export const BUILD_TARGETS = Object.freeze(
   [
     { name: 'macos-arm64', platform: 'darwin', architecture: 'arm64' },
     { name: 'macos-x64', platform: 'darwin', architecture: 'x64' },
     { name: 'windows-arm64', platform: 'win32', architecture: 'arm64' },
     { name: 'windows-x64', platform: 'win32', architecture: 'x64' },
-  ].map(Object.freeze),
+  ].map((target) => Object.freeze(target)),
 );
 
 const targetNames = BUILD_TARGETS.map(({ name }) => name).join(', ');
@@ -21,11 +23,12 @@ Each target requires its OS and matching Node architecture.
 Other target files in dist/ are kept.
 `;
 
+/** @param {string[]} args */
 export function parseBuildArguments(args) {
   let target;
   let help = false;
   for (let index = 0; index < args.length; index++) {
-    const argument = args[index];
+    const argument = /** @type {string} */ (args[index]);
     if (argument === '--help' || argument === '-h') {
       help = true;
     } else if (argument === '--target' || argument.startsWith('--target=')) {
@@ -39,6 +42,8 @@ export function parseBuildArguments(args) {
   return { target, help };
 }
 
+/** @param {string | undefined} name
+ * @param {{platform?: string, architecture?: string}} [options] */
 export function selectBuildTarget(
   name,
   { platform = process.platform, architecture = process.arch } = {},

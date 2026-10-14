@@ -5,12 +5,14 @@ import { createHash } from 'node:crypto';
 import { resolve, join, dirname } from 'node:path';
 import { build } from 'esbuild';
 import { inject } from 'postject';
+import { compile } from './compile.mjs';
 import { buildNative } from './build-native.mjs';
 import { BUILD_HELP, parseBuildArguments, selectBuildTarget } from './build-targets.mjs';
 
 const execute = promisify(execFile);
 const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
 
+/** @param {string} executable @param {string} bundle @param {string} staging @param {string} helper @param {string} platform */
 async function packageSingleExecutable(executable, bundle, staging, helper, platform) {
   const blob = join(staging, 'sea.blob');
   const config = join(staging, 'sea.json');
@@ -42,6 +44,7 @@ async function packageSingleExecutable(executable, bundle, staging, helper, plat
 
 // Node 24's SEA tooling does not support Intel Macs. A small launcher starts
 // the bundled runtime instead; users still need no Node installation.
+/** @param {string} executable @param {string} bundle @param {string} folder @param {string} helper */
 async function packageIntelMac(executable, bundle, folder, helper) {
   await mkdir(join(folder, 'lib'), { recursive: true });
   await mkdir(join(folder, 'native', 'bin'), { recursive: true });
@@ -68,6 +71,7 @@ async function packageIntelMac(executable, bundle, folder, helper) {
   );
 }
 
+/** @param {string} folder */
 async function copyDocumentation(folder) {
   for (const name of ['README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md'])
     await copyFile(name, join(folder, name));
@@ -85,6 +89,7 @@ async function copyDocumentation(folder) {
   }
 }
 
+/** @param {string} folder @param {string} folderName @param {string} platform */
 async function createArchive(folder, folderName, platform) {
   const archive = resolve('dist', `${folderName}.zip`);
   await rm(archive, { force: true });
@@ -93,7 +98,7 @@ async function createArchive(folder, folderName, platform) {
       timeout: 30000,
     });
   else {
-    const quote = (value) => `'${value.replaceAll("'", "''")}'`;
+    const quote = (/** @type {string} */ value) => `'${value.replaceAll("'", "''")}'`;
     await execute(
       'powershell.exe',
       [
@@ -120,6 +125,7 @@ async function main() {
     return;
   }
   const { name: label, platform, architecture } = selectBuildTarget(options.target);
+  compile();
   const { version } = JSON.parse(await readFile('package.json', 'utf8'));
   if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version))
     throw new Error('package.json must have a valid release version.');
@@ -138,7 +144,7 @@ async function main() {
   const helper = await buildNative({ platform, architecture });
   const bundle = join(staging, 'main.cjs');
   await build({
-    entryPoints: ['scripts/standalone-entry.mjs'],
+    entryPoints: ['.build/typescript/scripts/standalone-entry.mjs'],
     outfile: bundle,
     bundle: true,
     platform: 'node',
@@ -184,6 +190,8 @@ async function main() {
 try {
   await main();
 } catch (error) {
-  process.stderr.write(`Build failed: ${error.message}\n`);
+  process.stderr.write(
+    `Build failed: ${error instanceof Error ? error.message : 'Unknown build error'}\n`,
+  );
   process.exitCode = 1;
 }

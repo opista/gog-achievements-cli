@@ -1,4 +1,6 @@
-export default [
+import tseslint from 'typescript-eslint';
+export default tseslint.config(
+  { ignores: ['.build/**', 'dist/**', 'node_modules/**', 'native/**', 'licenses/**'] },
   {
     files: ['{bin,src,scripts,test}/**/*.mjs', 'eslint.config.mjs'],
     languageOptions: {
@@ -37,4 +39,29 @@ export default [
       eqeqeq: ['error', 'always'],
     },
   },
-];
+  {
+    files: ['src/**/*.mts', 'test/**/*.mts'],
+    extends: [...tseslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      parserOptions: { project: './tsconfig.json', tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/switch-exhaustiveness-check': [
+        'error',
+        { considerDefaultExhaustiveForUnions: false },
+      ],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', caughtErrors: 'none' },
+      ],
+      'no-console': 'error',
+      eqeqeq: ['error', 'always'],
+    },
+  },
+  // Fixtures implement asynchronous ports without introducing artificial waits.
+  { files: ['test/**/*.mts'], rules: { '@typescript-eslint/require-await': 'off' } },
+  // The terminal sanitizer intentionally preserves JavaScript String coercion.
+  { files: ['src/output.mts'], rules: { '@typescript-eslint/no-base-to-string': 'off' } },
+);

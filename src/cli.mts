@@ -1,32 +1,67 @@
+import type {
+  CommandData,
+  CommandName,
+  CLIOutcome,
+  Success,
+  OutcomeMeta,
+  InputStream,
+  OutputStream,
+  ProcessRunner,
+  NativeLoginOptions,
+  AuthStatus,
+  PublicError,
+} from './types.mjs';
 import { parseArgs } from 'node:util';
 import { GogAchievements } from './service.mjs';
 import { GogError, errorResult, requireValue } from './errors.mjs';
 import { readQueue, saveQueue, withQueueLock, id } from './data.mjs';
 import { runProcess } from './keychain.mjs';
 import { loginWithNativeWindow } from './native-login.mjs';
-import { COMMANDS, FLAGS, commandHelp } from './help.mjs';
+import { commandDefinitions, FLAGS, commandHelp } from './help.mjs';
 import { nativeHelperPath, isPackaged } from './assets.mjs';
 export { HELP } from './help.mjs';
+export type CLIService = Pick<
+  GogAchievements,
+  | 'loginURL'
+  | 'finishLogin'
+  | 'importLogin'
+  | 'authStatus'
+  | 'logout'
+  | 'listGames'
+  | 'listAchievements'
+  | 'createQueue'
+  | 'addToQueue'
+  | 'editQueue'
+  | 'applyQueue'
+>;
 
 // Flag types and help text share one definition.
 const ARGUMENT_OPTIONS = Object.fromEntries(
   Object.entries(FLAGS).map(([name, spec]) => [
     name,
     {
-      type: spec.value ? 'string' : 'boolean',
-      ...(spec.multiple ? { multiple: true } : {}),
-      ...(spec.short ? { short: spec.short } : {}),
+      type: 'value' in spec && spec.value ? 'string' : 'boolean',
+      multiple: 'multiple' in spec && !!spec.multiple,
+      ...('short' in spec && spec.short ? { short: spec.short } : {}),
     },
   ]),
-);
+) as ArgumentOptions;
 
-async function readStdin(input) {
+type ArgumentOptions = {
+  [K in keyof typeof FLAGS]: {
+    type: (typeof FLAGS)[K] extends { value: string } ? 'string' : 'boolean';
+    multiple: (typeof FLAGS)[K] extends { multiple: true } ? true : false;
+    short?: string;
+  };
+};
+
+async function readStdin(input: InputStream): Promise<string> {
   requireValue(
     !input.isTTY,
     'STDIN_REQUIRED',
     'Pipe the login value through stdin. The CLI will not prompt.',
   );
-  return new Promise((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     let value = '';
     const cleanup = () => {
       clearTimeout(timer);
@@ -35,8 +70,8 @@ async function readStdin(input) {
       input.removeListener('error', onError);
       input.pause();
     };
-    const onData = (chunk) => {
-      value += chunk.toString('utf8');
+    const onData = (chunk: Buffer | string) => {
+      value += typeof chunk === 'string' ? chunk : chunk.toString('utf8');
       if (value.length > 16_000) {
         cleanup();
         reject(new GogError('INPUT_TOO_LARGE', 'Login input exceeds 16 KB.', 2));
@@ -62,7 +97,7 @@ async function readStdin(input) {
 }
 
 export async function runCLI(
-  args,
+  args: string[],
   {
     service = new GogAchievements(),
     stdin = process.stdin,
@@ -70,12 +105,30 @@ export async function runCLI(
     execute = runProcess,
     platform = process.platform,
     nativeLogin = loginWithNativeWindow,
+  }: {
+    service?: CLIService;
+    stdin?: InputStream;
+    stderr?: OutputStream;
+    execute?: ProcessRunner;
+    platform?: string;
+    nativeLogin?: (options: NativeLoginOptions & { service: CLIService }) => Promise<AuthStatus>;
   } = {},
-) {
+): Promise<CLIOutcome> {
   let pretty = args.includes('--pretty');
-  let format = args.includes('--json') ? 'json' : 'text';
-  let command;
-  let file;
+  let format: 'json' | 'text' = args.includes('--json') ? 'json' : 'text';
+  let command: CommandName | undefined;
+  let file: string | undefined;
+  const success = <K extends keyof CommandData>(
+    name: K,
+    data: NoInfer<CommandData[K]>,
+  ): OutcomeMeta & { command: K; result: Success<CommandData[K]> } => ({
+    exitCode: 0,
+    pretty,
+    format,
+    command: name,
+    file,
+    result: { ok: true, data },
+  });
   try {
     let parsed;
     try {
@@ -106,9 +159,9 @@ export async function runCLI(
       requireValue(data, 'UNKNOWN_COMMAND', 'Unknown command. Run --help for the command list.');
       return { exitCode: 0, pretty, format, command: 'help', result: { ok: true, data } };
     }
-    const spec = COMMANDS[topic];
+    const spec = commandDefinitions[topic];
     requireValue(spec, 'UNKNOWN_COMMAND', 'Unknown command. Run --help for the command list.');
-    command = topic;
+    command = topic as CommandName;
     file = flags.file;
     requireValue(
       Object.keys(flags).every(
@@ -118,16 +171,17 @@ export async function runCLI(
       'One or more flags are not valid for this command.',
     );
     requireValue(
-      (spec.required ?? []).every((key) =>
-        typeof flags[key] === 'string' ? flags[key].trim() : flags[key]?.length,
-      ),
+      (spec.required ?? []).every((key) => {
+        const value = flags[key as keyof typeof flags];
+        return typeof value === 'string' ? value.trim() : Array.isArray(value) && value.length;
+      }),
       'MISSING_ARGUMENT',
       'A required flag is missing. Run --help for the command list.',
     );
     if (flags.game) id(flags.game, 'Game ID');
     for (const value of flags.achievement ?? []) id(value, 'Achievement ID');
-    let data;
     if (command === 'auth login') {
+      let data: CommandData['auth login'];
       const timeout = flags.timeout === undefined ? 180 : Number(flags.timeout);
       requireValue(
         Number.isInteger(timeout) && timeout >= 10 && timeout <= 600,
@@ -173,6 +227,7 @@ export async function runCLI(
           process.removeListener('SIGTERM', onInterrupt);
         }
       }
+      return success('auth login', data);
     } else if (command === 'auth finish' || command === 'auth import') {
       requireValue(
         command === 'auth import'
@@ -198,52 +253,61 @@ export async function runCLI(
         requireValue(clipboard.code === 0, 'CLIPBOARD_FAILED', 'Cannot read the clipboard.', 7);
         input = clipboard.stdout;
       } else input = await readStdin(stdin);
-      data =
-        command === 'auth finish'
-          ? await service.finishLogin(input)
-          : await service.importLogin(input);
-    } else if (command === 'auth status') data = await service.authStatus();
-    else if (command === 'auth logout') data = await service.logout();
+      return command === 'auth finish'
+        ? success('auth finish', await service.finishLogin(input))
+        : success('auth import', await service.importLogin(input));
+    } else if (command === 'auth status') return success(command, await service.authStatus());
+    else if (command === 'auth logout') return success(command, await service.logout());
     else if (command === 'games list') {
       requireValue(
         !(flags.search && flags['ids-only']),
         'INVALID_ARGUMENTS',
         '--search needs game titles. Use it without --ids-only.',
       );
-      data = await service.listGames({ search: flags.search, idsOnly: flags['ids-only'] });
-    } else if (command === 'achievements list') data = await service.listAchievements(flags.game);
+      return success(
+        command,
+        await service.listGames({ search: flags.search, idsOnly: flags['ids-only'] }),
+      );
+    } else if (command === 'achievements list')
+      return success(command, await service.listAchievements(flags.game));
     else if (command === 'doctor') {
-      let login;
+      let login: AuthStatus | PublicError;
       try {
         login = await service.authStatus();
       } catch (error) {
         login = errorResult(error).error;
       }
-      data = {
+      return success(command, {
         supported:
           ['darwin', 'win32'].includes(platform) &&
           Number(process.versions.node.split('.')[0]) >= 22,
         platform,
         architecture: process.arch,
         node: process.versions.node,
-        credentials_available: !login.code,
-        keychain_available: platform === 'darwin' ? !login.code : null,
+        credentials_available: !('code' in login),
+        keychain_available: platform === 'darwin' ? !('code' in login) : null,
         login,
-      };
-    } else if (command === 'queue show') data = await readQueue(flags.file);
-    else if (command === 'queue create') {
-      await withQueueLock(flags.file, async () => {
-        data = await service.createQueue(flags.game, flags.achievement ?? [], flags['unlocked-at']);
-        await saveQueue(flags.file, data, { create: true });
       });
+    } else if (command === 'queue show') return success(command, await readQueue(flags.file!));
+    else if (command === 'queue create') {
+      const data = await withQueueLock(flags.file!, async () => {
+        const created = await service.createQueue(
+          flags.game,
+          flags.achievement ?? [],
+          flags['unlocked-at'],
+        );
+        await saveQueue(flags.file!, created, { create: true });
+        return created;
+      });
+      return success(command, data);
     } else if (command === 'queue apply') {
       requireValue(
         !(flags.yes && flags['dry-run']),
         'INVALID_ARGUMENTS',
         'Use --yes or --dry-run, not both.',
       );
-      data = await withQueueLock(flags.file, async () =>
-        service.applyQueue(await readQueue(flags.file), { dryRun: !flags.yes }),
+      const data = await withQueueLock(flags.file!, async () =>
+        service.applyQueue(await readQueue(flags.file!), { dryRun: !flags.yes }),
       );
       if (!data.complete)
         throw new GogError(
@@ -252,20 +316,29 @@ export async function runCLI(
           6,
           { report: data },
         );
+      return success(command, data);
     } else {
-      await withQueueLock(flags.file, async () => {
-        const queue = await readQueue(flags.file);
-        data =
+      const data = await withQueueLock(flags.file!, async () => {
+        const queue = await readQueue(flags.file!);
+        const updated =
           command === 'queue add'
-            ? await service.addToQueue(queue, flags.achievement, flags['unlocked-at'])
-            : service.editQueue(queue, flags.achievement, {
+            ? await service.addToQueue(queue, flags.achievement!, flags['unlocked-at'])
+            : service.editQueue(queue, flags.achievement!, {
                 remove: command === 'queue remove',
                 unlockedAt: flags['unlocked-at'],
               });
-        await saveQueue(flags.file, data);
+        await saveQueue(flags.file!, updated);
+        return updated;
       });
+      switch (command) {
+        case 'queue add':
+          return success(command, data);
+        case 'queue remove':
+          return success(command, data);
+        case 'queue set-date':
+          return success(command, data);
+      }
     }
-    return { exitCode: 0, pretty, format, command, file, result: { ok: true, data } };
   } catch (error) {
     return {
       exitCode: error instanceof GogError ? error.exitCode : 4,

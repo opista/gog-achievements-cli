@@ -1,8 +1,10 @@
+import type { Queue, QueueItem } from './types.mjs';
+import { fields, isArray, errorCode } from './validation.mjs';
 import { writeFile, rename, unlink, open, link } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { GogError, requireValue } from './errors.mjs';
 
-export function id(value, label = 'ID') {
+export function id(value: unknown, label = 'ID') {
   requireValue(
     typeof value === 'string' || (typeof value === 'number' && Number.isSafeInteger(value)),
     'INVALID_ID',
@@ -17,7 +19,7 @@ export function id(value, label = 'ID') {
   return result;
 }
 
-export function timestamp(value, now = Date.now()) {
+export function timestamp(value: unknown, now = Date.now()) {
   requireValue(typeof value === 'string', 'INVALID_DATE', 'Use an RFC 3339 date with a time zone.');
   const match =
     /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.exec(
@@ -28,7 +30,13 @@ export function timestamp(value, now = Date.now()) {
     'INVALID_DATE',
     'Use an RFC 3339 date with a time zone, such as 2026-10-01T18:30:00+01:00.',
   );
-  const [, y, m, d, h, minute, s, zone] = match;
+  const y = match[1]!;
+  const m = match[2]!;
+  const d = match[3]!;
+  const h = match[4]!;
+  const minute = match[5]!;
+  const s = match[6]!;
+  const zone = match[7]!;
   const date = new Date(Date.UTC(+y, +m - 1, +d, +h, +minute, +s));
   const valid =
     +y >= 1970 &&
@@ -56,11 +64,11 @@ export function defaultTimestamp(now = Date.now()) {
 
 // Preserve large GOG client, build, user and achievement IDs before JSON.parse
 // can round them. Tokens inside quoted strings are never changed.
-export function parseJSON(text) {
+export function parseJSON(text: string): unknown {
   let safe = '';
   let index = 0;
   while (index < text.length) {
-    const char = text[index];
+    const char = text[index]!;
     if (char === '"') {
       const start = index++;
       while (index < text.length) {
@@ -89,12 +97,14 @@ export function parseJSON(text) {
       index++;
     }
   }
-  return JSON.parse(safe);
+  const decoded: unknown = JSON.parse(safe);
+  return decoded;
 }
 
-export function validateQueue(queue, now = Date.now()) {
+export function validateQueue(input: unknown, now = Date.now()): Queue {
+  const queue = fields(input);
   requireValue(
-    queue && queue.schema_version === 1 && Array.isArray(queue.items),
+    input && queue.schema_version === 1 && isArray(queue.items),
     'INVALID_QUEUE',
     'Use a queue with schema_version 1 and an items array.',
   );
@@ -106,11 +116,12 @@ export function validateQueue(queue, now = Date.now()) {
     'The queue has an unknown field.',
   );
   const userID = id(queue.user_id, 'User ID');
-  const gameID = id(queue.game?.id, 'Game ID');
-  const clientID = id(queue.game?.client_id, 'Client ID');
+  const game = fields(queue.game);
+  const gameID = id(game.id, 'Game ID');
+  const clientID = id(game.client_id, 'Client ID');
   requireValue(
-    typeof queue.game.title === 'string' &&
-      Object.keys(queue.game).every((key) => ['id', 'client_id', 'title'].includes(key)),
+    typeof game.title === 'string' &&
+      Object.keys(game).every((key) => ['id', 'client_id', 'title'].includes(key)),
     'INVALID_QUEUE',
     'The queue game is not valid.',
   );
@@ -122,8 +133,9 @@ export function validateQueue(queue, now = Date.now()) {
     'A queue can contain at most 1000 achievements.',
   );
   const seen = new Set();
-  const items = [];
-  for (const item of queue.items) {
+  const items: QueueItem[] = [];
+  for (const raw of queue.items) {
+    const item = fields(raw);
     const achievementID = id(item?.achievement_id, 'Achievement ID');
     requireValue(
       !seen.has(achievementID),
@@ -142,19 +154,26 @@ export function validateQueue(queue, now = Date.now()) {
       'The queue item is not valid.',
     );
     const unlockedAt = timestamp(item.unlocked_at, now); // null is never a valid unlock request.
-    items.push({ ...item, achievement_id: achievementID, unlocked_at: unlockedAt });
+    items.push({
+      ...item,
+      achievement_id: achievementID,
+      key: item.key,
+      name: item.name,
+      unlocked_at: unlockedAt,
+    });
   }
   return {
     ...queue,
     user_id: userID,
-    game: { ...queue.game, id: gameID, client_id: clientID },
+    schema_version: 1,
+    game: { ...game, id: gameID, title: game.title, client_id: clientID },
     created_at: createdAt,
     updated_at: updatedAt,
     items,
   };
 }
 
-export async function readQueue(path) {
+export async function readQueue(path: string) {
   try {
     const file = await open(path, 'r');
     try {
@@ -174,8 +193,8 @@ export async function readQueue(path) {
   }
 }
 
-export async function saveQueue(path, queue, { create = false } = {}) {
-  queue = validateQueue(queue);
+export async function saveQueue(path: string, input: unknown, { create = false } = {}) {
+  const queue = validateQueue(input);
   const data = `${JSON.stringify(queue, null, 2)}\n`;
   const temporary = `${path}.${randomUUID()}.tmp`;
   try {
@@ -185,8 +204,8 @@ export async function saveQueue(path, queue, { create = false } = {}) {
     else await rename(temporary, path);
   } catch (error) {
     throw new GogError(
-      error.code === 'EEXIST' ? 'QUEUE_EXISTS' : 'QUEUE_WRITE_FAILED',
-      error.code === 'EEXIST'
+      errorCode(error) === 'EEXIST' ? 'QUEUE_EXISTS' : 'QUEUE_WRITE_FAILED',
+      errorCode(error) === 'EEXIST'
         ? 'The queue file already exists. Use another file.'
         : 'Cannot save the queue file.',
       2,
@@ -196,14 +215,14 @@ export async function saveQueue(path, queue, { create = false } = {}) {
   }
 }
 
-export async function withQueueLock(path, operation) {
+export async function withQueueLock<T>(path: string, operation: () => Promise<T>) {
   let lock;
   try {
     lock = await open(`${path}.lock`, 'wx', 0o600);
   } catch (error) {
     throw new GogError(
-      error.code === 'EEXIST' ? 'QUEUE_BUSY' : 'QUEUE_LOCK_FAILED',
-      error.code === 'EEXIST'
+      errorCode(error) === 'EEXIST' ? 'QUEUE_BUSY' : 'QUEUE_LOCK_FAILED',
+      errorCode(error) === 'EEXIST'
         ? 'The queue is in use. Check its .lock file before retrying.'
         : 'Cannot lock the queue.',
       5,

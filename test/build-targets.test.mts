@@ -1,3 +1,4 @@
+import { processError } from './assertions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -14,9 +15,9 @@ const targets = [
   ['macos-x64', 'darwin', 'x64'],
   ['windows-arm64', 'win32', 'arm64'],
   ['windows-x64', 'win32', 'x64'],
-];
+] satisfies [string, string, string][];
 
-test('build defaults and explicit targets use the matching OS and Node architecture', () => {
+void test('build defaults and explicit targets use the matching OS and Node architecture', () => {
   for (const [name, platform, architecture] of targets) {
     const host = { platform, architecture };
     const expected = { name, platform, architecture };
@@ -25,7 +26,7 @@ test('build defaults and explicit targets use the matching OS and Node architect
   }
 });
 
-test('build rejects unknown targets and unsupported runtimes', () => {
+void test('build rejects unknown targets and unsupported runtimes', () => {
   assert.throws(() => selectBuildTarget('linux-x64'), /Unknown build target/);
   for (const host of [
     { platform: 'linux', architecture: 'x64' },
@@ -36,19 +37,21 @@ test('build rejects unknown targets and unsupported runtimes', () => {
   }
 });
 
-test('build rejects every OS and Node architecture mismatch with a clear target error', () => {
+void test('build rejects every OS and Node architecture mismatch with a clear target error', () => {
   for (const [name, platform, architecture] of targets) {
     for (const [other] of targets) {
       if (other === name) continue;
       assert.throws(
         () => selectBuildTarget(other, { platform, architecture }),
-        (error) => error.message.includes(other) && error.message.includes(`runtime is ${name}`),
+        (error) =>
+          processError(error).message.includes(other) &&
+          processError(error).message.includes(`runtime is ${name}`),
       );
     }
   }
 });
 
-test('build arguments accept a target, equals syntax, and help', () => {
+void test('build arguments accept a target, equals syntax, and help', () => {
   assert.deepEqual(parseBuildArguments([]), { target: undefined, help: false });
   assert.deepEqual(parseBuildArguments(['--target', 'macos-arm64']), {
     target: 'macos-arm64',
@@ -63,7 +66,7 @@ test('build arguments accept a target, equals syntax, and help', () => {
   }
 });
 
-test('build rejects missing, duplicate and unknown arguments', () => {
+void test('build rejects missing, duplicate and unknown arguments', () => {
   for (const args of [['--target'], ['--target='], ['--target', '--help']]) {
     assert.throws(() => parseBuildArguments(args), /requires a target name/);
   }
@@ -78,7 +81,7 @@ test('build rejects missing, duplicate and unknown arguments', () => {
   }
 });
 
-test('build help and invalid targets work outside the checkout without creating files', async (t) => {
+void test('build help and invalid targets work outside the checkout without creating files', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'gog-build-options-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const script = fileURLToPath(new URL('../scripts/build.mjs', import.meta.url));
@@ -90,18 +93,20 @@ test('build help and invalid targets work outside the checkout without creating 
   await assert.rejects(
     execute(process.execPath, [script, '--target', 'unknown-target'], options),
     (error) =>
-      error.code === 1 &&
-      error.stdout === '' &&
-      error.stderr.startsWith('Build failed: Unknown build target:'),
+      processError(error).code === 1 &&
+      processError(error).stdout === '' &&
+      processError(error).stderr.startsWith('Build failed: Unknown build target:'),
   );
   const host = targets.find(
     ([, platform, architecture]) => platform === process.platform && architecture === process.arch,
   );
   if (host) {
-    const [other] = targets.find(([name]) => name !== host[0]);
+    const [other] = targets.find(([name]) => name !== host[0])!;
     await assert.rejects(
       execute(process.execPath, [script, '--target', other], options),
-      (error) => error.code === 1 && error.stderr.includes(`Target ${other} requires`),
+      (error) =>
+        processError(error).code === 1 &&
+        processError(error).stderr.includes(`Target ${other} requires`),
     );
   }
   assert.deepEqual(await readdir(directory), []);

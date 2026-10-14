@@ -1,10 +1,12 @@
+import type { NativeConfig, HelperOptions, NativeLoginOptions, AuthStatus } from './types.mjs';
+import { fields, errorCode } from './validation.mjs';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { LOGIN_REDIRECT } from './api.mjs';
 import { GogError, requireValue } from './errors.mjs';
 import { nativeHelperPath } from './assets.mjs';
 import { runProcess } from './process.mjs';
 
-const HELPER_ERRORS = new Map([
+const HELPER_ERRORS = new Map<string, [string, number]>([
   ['AUTH_CANCELLED', ['Sign-in was cancelled.', 3]],
   ['AUTH_TIMEOUT', ['Sign-in timed out. Run auth login to try again.', 3]],
   [
@@ -26,8 +28,14 @@ const HELPER_ERRORS = new Map([
 ]);
 
 export async function runNativeHelper(
-  config,
-  { signal, helperPath, spawnImpl, execute = runProcess, platform = process.platform } = {},
+  config: NativeConfig,
+  {
+    signal,
+    helperPath,
+    spawnImpl,
+    execute = runProcess,
+    platform = process.platform,
+  }: HelperOptions = {},
 ) {
   if (signal?.aborted) throw new GogError('AUTH_CANCELLED', 'Sign-in was cancelled.', 3);
   let result;
@@ -39,19 +47,19 @@ export async function runNativeHelper(
       spawnImpl,
     });
   } catch (error) {
-    if (error.code === 'PROCESS_CANCELLED')
+    if (errorCode(error) === 'PROCESS_CANCELLED')
       throw new GogError('AUTH_CANCELLED', 'Sign-in was cancelled.', 3);
-    if (error.code === 'PROCESS_TIMEOUT')
+    if (errorCode(error) === 'PROCESS_TIMEOUT')
       throw new GogError('AUTH_TIMEOUT', 'Sign-in timed out. Run auth login to try again.', 3);
-    if (error.code === 'PROCESS_OUTPUT_LIMIT')
+    if (errorCode(error) === 'PROCESS_OUTPUT_LIMIT')
       throw new GogError(
         'INVALID_LOGIN_RESPONSE',
         'The sign-in helper returned an invalid response.',
         3,
       );
     throw new GogError(
-      error.code === 'PROCESS_MISSING' ? 'NATIVE_HELPER_MISSING' : 'NATIVE_HELPER_FAILED',
-      error.code === 'PROCESS_MISSING'
+      errorCode(error) === 'PROCESS_MISSING' ? 'NATIVE_HELPER_MISSING' : 'NATIVE_HELPER_FAILED',
+      errorCode(error) === 'PROCESS_MISSING'
         ? 'Build the native sign-in helper with npm run build, then retry auth login.'
         : 'Cannot start the native sign-in window.',
       7,
@@ -66,7 +74,7 @@ export async function runNativeHelper(
           7,
         );
   }
-  let event;
+  let event: unknown;
   try {
     event = JSON.parse(result.stdout);
   } catch {
@@ -76,7 +84,7 @@ export async function runNativeHelper(
       3,
     );
   }
-  if (result.code !== 0 && event?.type !== 'error')
+  if (result.code !== 0 && fields(event).type !== 'error')
     throw new GogError('NATIVE_HELPER_FAILED', 'The native sign-in window closed unexpectedly.', 7);
   return event;
 }
@@ -88,7 +96,7 @@ export async function loginWithNativeWindow({
   signal,
   runHelper = runNativeHelper,
   platform = process.platform,
-} = {}) {
+}: NativeLoginOptions = {}): Promise<AuthStatus> {
   requireValue(service, 'INVALID_LOGIN_OPTIONS', 'A login service is required.');
   requireValue(
     Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 600_000,
@@ -97,17 +105,19 @@ export async function loginWithNativeWindow({
   );
   const state = randomBytes(32).toString('base64url');
   progress('Complete GOG sign-in in the window. This command will finish automatically.');
-  const event = await runHelper(
-    { login_url: service.loginURL({ state }), state, timeout_ms: timeoutMs },
-    { signal, platform },
+  const event = fields(
+    await runHelper(
+      { login_url: service.loginURL({ state }), state, timeout_ms: timeoutMs },
+      { signal, platform },
+    ),
   );
   if (event?.type === 'error') {
-    const [message, exitCode] = HELPER_ERRORS.get(event.code) ?? [
+    const [message, exitCode] = HELPER_ERRORS.get(String(event.code)) ?? [
       'The native sign-in window could not finish login.',
       7,
     ];
     throw new GogError(
-      HELPER_ERRORS.has(event.code) ? event.code : 'NATIVE_HELPER_FAILED',
+      HELPER_ERRORS.has(String(event.code)) ? String(event.code) : 'NATIVE_HELPER_FAILED',
       message,
       exitCode,
     );

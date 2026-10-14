@@ -1,3 +1,3 @@
 #!/usr/bin/env node
-import { main } from '../src/main.mjs';
+import { main } from '../.build/typescript/src/main.mjs';
 await main();

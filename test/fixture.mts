@@ -1,3 +1,6 @@
+import assert from 'node:assert/strict';
+import type { Session, FetchOptions } from '../src/types.mjs';
+import { fields } from '../src/validation.mjs';
 import { GogAPI } from '../src/api.mjs';
 import { GogAchievements } from '../src/service.mjs';
 
@@ -10,8 +13,11 @@ export const SECOND_ID = '48225958150521213';
 export const DATE = '2026-01-01T12:34:56Z';
 
 export class MemoryVault {
+  storage?: string;
+  value: Session | null;
+  saved: Session[] = [];
   constructor(
-    session = {
+    session: Session | null = {
       user_id: USER_ID,
       access_token: 'fake-account-access',
       refresh_token: 'fake-account-refresh',
@@ -24,7 +30,7 @@ export class MemoryVault {
   async get() {
     return this.value;
   }
-  async set(value) {
+  async set(value: Session) {
     this.value = value;
     this.saved.push(value);
   }
@@ -33,10 +39,30 @@ export class MemoryVault {
   }
 }
 
-export function fixture(options = {}) {
-  const calls = [];
-  const writes = [];
-  const achievements = [
+export function fixture(
+  options: {
+    libraryPages?: number;
+    authUser?: string;
+    owned?: unknown;
+    rejectWrites?: boolean;
+    clampDate?: string;
+    loseWriteResponse?: boolean;
+  } = {},
+) {
+  const calls: { url: URL; init: FetchOptions }[] = [];
+  const writes: {
+    achievement_id: string;
+    body: { date_unlocked: string };
+    authorization: string | undefined;
+  }[] = [];
+  const achievements: {
+    achievement_id: string;
+    achievement_key: string;
+    name: string;
+    description: string;
+    date_unlocked: string | null;
+    visible: boolean;
+  }[] = [
     {
       achievement_id: ACHIEVEMENT_ID,
       achievement_key: 'ACH_FIRST',
@@ -57,15 +83,18 @@ export function fixture(options = {}) {
   let libraryPages = options.libraryPages ?? 1;
   let readCount = 0;
   let total = 2;
-  let responseHook;
-  const fetchImpl = async (url, init) => {
+  let responseHook:
+    | ((url: URL, init: FetchOptions) => Response | void | Promise<Response | void>)
+    | null
+    | undefined;
+  const fetchImpl = async (url: string, init: FetchOptions) => {
     const parsed = new URL(url);
     calls.push({ url: parsed, init });
     if (responseHook) {
       const override = await responseHook(parsed, init);
       if (override) return override;
     }
-    let data;
+    let data: unknown;
     if (parsed.hostname === 'auth.gog.com') {
       data = {
         user_id: options.authUser ?? USER_ID,
@@ -102,17 +131,21 @@ export function fixture(options = {}) {
       readCount++;
       data = { items: achievements, total_count: total, limit: 1000, page_token: '0' };
     } else if (parsed.pathname.includes('/achievements/') && init.method === 'POST') {
-      const achievementID = parsed.pathname.split('/').at(-1);
-      const body = JSON.parse(init.body);
+      const achievementID = parsed.pathname.split('/').at(-1)!;
+      assert.equal(typeof init.body, 'string');
+      const body = fields(JSON.parse(init.body as string));
+      assert.equal(typeof body.date_unlocked, 'string');
+      const writeBody = { date_unlocked: body.date_unlocked as string };
       writes.push({
         achievement_id: achievementID,
-        body,
+        body: writeBody,
         authorization: init.headers.Authorization,
       });
       if (options.rejectWrites)
         return new Response('DO NOT ECHO SECRET: fake-token', { status: 403 });
       const achievement = achievements.find((item) => item.achievement_id === achievementID);
-      achievement.date_unlocked = options.clampDate ?? body.date_unlocked;
+      assert.ok(achievement);
+      achievement.date_unlocked = options.clampDate ?? writeBody.date_unlocked;
       if (options.loseWriteResponse)
         throw new Error(`Network error with credential URL ${url}?token=fake-scoped-access`);
       return new Response(null, { status: 204 });
@@ -132,13 +165,13 @@ export function fixture(options = {}) {
     get readCount() {
       return readCount;
     },
-    setTotal(value) {
+    setTotal(value: number) {
       total = value;
     },
-    setHook(value) {
+    setHook(value: typeof responseHook) {
       responseHook = value;
     },
-    setLibraryPages(value) {
+    setLibraryPages(value: number) {
       libraryPages = value;
     },
   };

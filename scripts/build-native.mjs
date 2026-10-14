@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const execute = promisify(execFile);
 
+/** @param {string} architecture @param {string} dotnet */
 async function buildWindows(architecture, dotnet) {
   process.stdout.write(`Building Windows ${architecture} sign-in helper...\n`);
   await execute(
@@ -73,6 +74,7 @@ async function buildMac() {
   }
 }
 
+/** @param {string} helper @param {string} platform */
 async function verifyHelper(helper, platform) {
   const commands = [
     '--self-test',
@@ -81,12 +83,21 @@ async function verifyHelper(helper, platform) {
   ];
   for (const command of commands) {
     const result = await execute(helper, [command], { timeout: 10000 });
-    const outcome = JSON.parse(result.stdout);
-    if (!outcome.self_test_passed) throw new Error(`Native ${command} failed.`);
-    process.stdout.write(`Native ${command}: ${outcome.checks} checks passed.\n`);
+    const outcome = /** @type {unknown} */ (JSON.parse(result.stdout));
+    if (
+      !outcome ||
+      typeof outcome !== 'object' ||
+      !('self_test_passed' in outcome) ||
+      !outcome.self_test_passed
+    )
+      throw new Error(`Native ${command} failed.`);
+    process.stdout.write(
+      `Native ${command}: ${'checks' in outcome ? String(outcome.checks) : 'unknown'} checks passed.\n`,
+    );
   }
 }
 
+/** @param {{platform?: string, architecture?: string, dotnet?: string, runSelfTest?: boolean}} [options] */
 export async function buildNative({
   platform = process.platform,
   architecture = process.arch,

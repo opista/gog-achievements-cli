@@ -7,6 +7,7 @@ import { fixture, GAME_ID, ACHIEVEMENT_ID, DATE } from '../test/fixture.mjs';
 const directory = await mkdtemp(join(tmpdir(), 'gog-cli-demo-'));
 const file = join(directory, 'queue.json');
 const mock = fixture();
+/** @type {({command: string} & import("../src/types.mjs").CLIOutcome["result"])[]} */
 const steps = [];
 try {
   for (const args of [

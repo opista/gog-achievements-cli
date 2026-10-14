@@ -1,31 +1,63 @@
+import type {
+  Session,
+  Game,
+  PublicGame,
+  Achievement,
+  Queue,
+  QueueItem,
+  Context,
+  GogAPIPort,
+  CredentialVault,
+  LoginOptions,
+  SignalOptions,
+  AuthStatus,
+  GamesResult,
+  AchievementsResult,
+  RestorationResult,
+  RestorationReport,
+} from './types.mjs';
+import { fields, errorCode } from './validation.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { GogAPI, buildLoginURL, LOGIN_REDIRECT } from './api.mjs';
 import { credentialVault } from './keychain.mjs';
 import { GogError, requireValue } from './errors.mjs';
 import { id, timestamp, defaultTimestamp, validateQueue } from './data.mjs';
 
-function validSession(session) {
+export function validSession(value: unknown): Session {
+  const session = fields(value);
   requireValue(
-    session &&
+    value &&
       typeof session.access_token === 'string' &&
       session.access_token &&
       typeof session.refresh_token === 'string' &&
       session.refresh_token &&
+      typeof session.expires_at === 'number' &&
       Number.isFinite(session.expires_at),
     'AUTH_REQUIRED',
     'Sign in with auth login.',
     3,
   );
   id(session.user_id, 'User ID');
-  return session;
+  // All required fields are checked above; retain the original session object.
+  return session as Record<string, unknown> & Session;
 }
 
 export class GogAchievements {
+  api: GogAPIPort;
+  vault: CredentialVault;
+  wait: (ms: number) => Promise<unknown>;
+  now: () => number;
+  cachedSession: Session | null;
   constructor({
     api = new GogAPI(),
     vault = credentialVault(),
     wait = delay,
     now = Date.now,
+  }: {
+    api?: GogAPIPort;
+    vault?: CredentialVault;
+    wait?: (ms: number) => Promise<unknown>;
+    now?: () => number;
   } = {}) {
     this.api = api;
     this.vault = vault;
@@ -34,11 +66,14 @@ export class GogAchievements {
     this.cachedSession = null;
   }
 
-  loginURL(options) {
+  loginURL(options?: LoginOptions) {
     return buildLoginURL(options);
   }
 
-  async finishLogin(input, { redirectURI = LOGIN_REDIRECT, signal } = {}) {
+  async finishLogin(
+    input: string,
+    { redirectURI = LOGIN_REDIRECT, signal }: LoginOptions & SignalOptions = {},
+  ): Promise<AuthStatus> {
     const checkCancelled = () => {
       if (signal?.aborted) throw new GogError('AUTH_CANCELLED', 'Sign-in was cancelled.', 3);
     };
@@ -93,7 +128,7 @@ export class GogAchievements {
     };
   }
 
-  async importLogin(input) {
+  async importLogin(input: string): Promise<AuthStatus> {
     const refreshToken = input.trim();
     requireValue(
       refreshToken.length > 0 && refreshToken.length <= 16_000 && !/\s/.test(refreshToken),
@@ -111,10 +146,10 @@ export class GogAchievements {
     };
   }
 
-  async authStatus() {
-    const session = await this.vault.get();
-    if (!session) return { authenticated: false, storage: this.vault.storage ?? 'macos_keychain' };
-    validSession(session);
+  async authStatus(): Promise<AuthStatus> {
+    const stored = await this.vault.get();
+    if (!stored) return { authenticated: false, storage: this.vault.storage ?? 'macos_keychain' };
+    const session = validSession(stored);
     return {
       authenticated: true,
       user_id: session.user_id,
@@ -123,7 +158,7 @@ export class GogAchievements {
     };
   }
 
-  async logout() {
+  async logout(): Promise<AuthStatus> {
     await this.vault.remove();
     this.cachedSession = null;
     return { authenticated: false, local_login_removed: true };
@@ -146,7 +181,10 @@ export class GogAchievements {
     return session;
   }
 
-  async listGames({ search = '', idsOnly = false } = {}) {
+  async listGames({
+    search = '',
+    idsOnly = false,
+  }: { search?: string | undefined; idsOnly?: boolean | undefined } = {}): Promise<GamesResult> {
     const session = await this.session();
     const games = idsOnly
       ? (await this.api.ownedIDs(session.access_token)).map((gameID) => ({ id: gameID }))
@@ -154,8 +192,8 @@ export class GogAchievements {
     return { user_id: session.user_id, count: games.length, games };
   }
 
-  async context(gameID) {
-    gameID = id(gameID, 'Game ID');
+  async context(value: unknown): Promise<Context> {
+    const gameID = id(value, 'Game ID');
     const session = await this.session();
     const owned = await this.api.ownedIDs(session.access_token);
     requireValue(
@@ -169,7 +207,7 @@ export class GogAchievements {
     return { session, game, achievements };
   }
 
-  async listAchievements(gameID) {
+  async listAchievements(gameID: unknown): Promise<AchievementsResult> {
     const { session, game, achievements } = await this.context(gameID);
     return {
       user_id: session.user_id,
@@ -179,11 +217,11 @@ export class GogAchievements {
     };
   }
 
-  publicGame(game) {
+  publicGame(game: PublicGame): PublicGame {
     return { id: game.id, title: game.title, client_id: game.client_id };
   }
 
-  assertQueueAccount(queue, context) {
+  assertQueueAccount(queue: Queue, context: Context) {
     requireValue(
       queue.user_id === context.session.user_id,
       'ACCOUNT_MISMATCH',
@@ -198,7 +236,12 @@ export class GogAchievements {
     );
   }
 
-  addItems(queue, achievementIDs, unlockedAt, achievements) {
+  addItems(
+    queue: Queue,
+    achievementIDs: readonly unknown[],
+    unlockedAt: unknown,
+    achievements: readonly Achievement[],
+  ): Queue {
     const date = timestamp(unlockedAt ?? defaultTimestamp(this.now()), this.now());
     const existing = new Set(queue.items.map((item) => item.achievement_id));
     const lookup = new Map(achievements.map((item) => [item.id, item]));
@@ -237,13 +280,17 @@ export class GogAchievements {
     );
   }
 
-  async createQueue(gameID, achievementIDs = [], unlockedAt) {
+  async createQueue(
+    gameID: unknown,
+    achievementIDs: readonly unknown[] = [],
+    unlockedAt?: unknown,
+  ): Promise<Queue> {
     if (unlockedAt !== undefined) timestamp(unlockedAt, this.now());
     achievementIDs.forEach((value) => id(value, 'Achievement ID'));
     const { session, game, achievements } = await this.context(gameID);
-    const queue = {
+    const queue: Queue = {
       schema_version: 1,
-      user_id: session.user_id,
+      user_id: String(session.user_id),
       game: this.publicGame(game),
       created_at: defaultTimestamp(this.now()),
       updated_at: defaultTimestamp(this.now()),
@@ -252,16 +299,24 @@ export class GogAchievements {
     return this.addItems(queue, achievementIDs, unlockedAt, achievements);
   }
 
-  async addToQueue(queue, achievementIDs, unlockedAt) {
-    queue = validateQueue(queue, this.now());
+  async addToQueue(
+    input: unknown,
+    achievementIDs: readonly unknown[],
+    unlockedAt?: unknown,
+  ): Promise<Queue> {
+    const queue = validateQueue(input, this.now());
     if (unlockedAt !== undefined) timestamp(unlockedAt, this.now());
     const context = await this.context(queue.game.id);
     this.assertQueueAccount(queue, context);
     return this.addItems(queue, achievementIDs, unlockedAt, context.achievements);
   }
 
-  editQueue(queue, achievementIDs, { unlockedAt, remove = false } = {}) {
-    queue = validateQueue(queue, this.now());
+  editQueue(
+    input: unknown,
+    achievementIDs: readonly unknown[],
+    { unlockedAt, remove = false }: { unlockedAt?: unknown; remove?: boolean } = {},
+  ): Queue {
+    const queue = validateQueue(input, this.now());
     const selected = new Set(achievementIDs.map((value) => id(value, 'Achievement ID')));
     const known = new Set(queue.items.map((item) => item.achievement_id));
     requireValue(
@@ -278,7 +333,7 @@ export class GogAchievements {
     return validateQueue({ ...queue, items, updated_at: defaultTimestamp(this.now()) }, this.now());
   }
 
-  planRestoration(queue, context) {
+  planRestoration(queue: Queue, context: Pick<Context, 'achievements'>): RestorationResult[] {
     const lookup = new Map(context.achievements.map((item) => [item.id, item]));
     // Check the entire queue before the first write.
     return queue.items.map((item) => {
@@ -301,11 +356,19 @@ export class GogAchievements {
     });
   }
 
-  async readAchievement(game, session, achievementID) {
+  async readAchievement(
+    game: Game,
+    session: Session,
+    achievementID: string,
+  ): Promise<Achievement | undefined> {
     return (await this.api.achievements(game, session)).find((item) => item.id === achievementID);
   }
 
-  async verifyUnlock(game, session, achievementID) {
+  async verifyUnlock(
+    game: Game,
+    session: Session,
+    achievementID: string,
+  ): Promise<Achievement | undefined> {
     let achievement;
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt) await this.wait(500 * attempt);
@@ -315,7 +378,12 @@ export class GogAchievements {
     return achievement;
   }
 
-  async restoreAchievement(game, session, queued, result) {
+  async restoreAchievement(
+    game: Game,
+    session: Session,
+    queued: QueueItem,
+    result: RestorationResult,
+  ): Promise<RestorationResult> {
     let attempted = false;
     try {
       // Re-read before each write. GOG has no atomic compare/set operation.
@@ -333,7 +401,7 @@ export class GogAchievements {
           actual_unlocked_at: latest.unlocked_at,
         };
       attempted = true;
-      let writeError;
+      let writeError: unknown;
       try {
         await this.api.unlock(game, session, queued.achievement_id, queued.unlocked_at);
       } catch (error) {
@@ -353,7 +421,7 @@ export class GogAchievements {
       }
       return {
         ...observed,
-        status: ['API_REJECTED', 'AUTH_REJECTED'].includes(writeError?.code)
+        status: ['API_REJECTED', 'AUTH_REJECTED'].some((code) => code === errorCode(writeError))
           ? 'failed'
           : 'unconfirmed',
         error_code: writeError instanceof GogError ? writeError.code : 'UNLOCK_NOT_CONFIRMED',
@@ -367,8 +435,8 @@ export class GogAchievements {
     }
   }
 
-  async applyQueue(queue, { dryRun = true } = {}) {
-    queue = validateQueue(queue, this.now());
+  async applyQueue(input: unknown, { dryRun = true } = {}): Promise<RestorationReport> {
+    const queue = validateQueue(input, this.now());
     requireValue(
       queue.items.length,
       'EMPTY_QUEUE',
@@ -377,7 +445,7 @@ export class GogAchievements {
     const context = await this.context(queue.game.id);
     this.assertQueueAccount(queue, context);
     const results = this.planRestoration(queue, context);
-    const report = {
+    const report: RestorationReport = {
       dry_run: dryRun,
       user_id: queue.user_id,
       game: this.publicGame(context.game),
@@ -397,15 +465,15 @@ export class GogAchievements {
       5,
     );
     for (let index = 0; index < results.length; index++) {
-      const result = results[index];
+      const result = results[index]!;
       if (result.status !== 'pending') continue;
       results[index] = await this.restoreAchievement(
         context.game,
         scoped,
-        queue.items[index],
+        queue.items[index]!,
         result,
       );
-      const status = results[index].status;
+      const status = results[index]!.status;
       if (status !== 'restored' && status !== 'skipped_already_unlocked') {
         report.complete = false;
         for (const remaining of results.slice(index + 1))

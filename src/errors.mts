@@ -1,5 +1,9 @@
+import type { PublicError, Failure } from './types.mjs';
 export class GogError extends Error {
-  constructor(code, message, exitCode = 4, details) {
+  code: string;
+  exitCode: number;
+  details?: PublicError['details'];
+  constructor(code: string, message: string, exitCode = 4, details?: PublicError['details']) {
     super(message);
     this.name = 'GogError';
     this.code = code;
@@ -8,11 +12,17 @@ export class GogError extends Error {
   }
 }
 
-export function requireValue(condition, code, message, exitCode = 2, details) {
+export function requireValue(
+  condition: unknown,
+  code: string,
+  message: string,
+  exitCode = 2,
+  details?: PublicError['details'],
+): asserts condition {
   if (!condition) throw new GogError(code, message, exitCode, details);
 }
 
-export function errorResult(error) {
+export function errorResult(error: unknown): Failure {
   if (!(error instanceof GogError)) {
     // Fetch, process and filesystem errors can contain credentials or URLs.
     return {

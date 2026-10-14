@@ -1,3 +1,6 @@
+import { jsonValue } from './assertions.mjs';
+import { fields } from '../src/validation.mjs';
+import { gogError } from './assertions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, stat, rm } from 'node:fs/promises';
@@ -13,9 +16,11 @@ import {
 } from '../src/data.mjs';
 import { fixture, GAME_ID, ACHIEVEMENT_ID, DATE } from './fixture.mjs';
 
-test('large numeric IDs keep all digits, and strings with escapes are unchanged', () => {
-  const result = parseJSON(
-    '{"id":1007860867957265845,"small":42,"negative":-9007199254740993,"ratio":0.5,"text":"numeric 1007860867957265845 and \\\"quoted\\\""}',
+void test('large numeric IDs keep all digits, and strings with escapes are unchanged', () => {
+  const result = fields(
+    parseJSON(
+      '{"id":1007860867957265845,"small":42,"negative":-9007199254740993,"ratio":0.5,"text":"numeric 1007860867957265845 and \\\"quoted\\\""}',
+    ),
   );
   assert.equal(result.id, '1007860867957265845');
   assert.equal(result.negative, '-9007199254740993');
@@ -24,7 +29,7 @@ test('large numeric IDs keep all digits, and strings with escapes are unchanged'
   assert.equal(result.text, 'numeric 1007860867957265845 and "quoted"');
 });
 
-test('unlock dates validate the calendar and zone and normalize to UTC seconds', () => {
+void test('unlock dates validate the calendar and zone and normalize to UTC seconds', () => {
   assert.equal(timestamp('2026-01-01T13:34:56+01:00'), DATE);
   assert.equal(timestamp('2024-02-29T12:00:00.123Z'), '2024-02-29T12:00:00Z');
   for (const value of [
@@ -37,32 +42,32 @@ test('unlock dates validate the calendar and zone and normalize to UTC seconds',
   ]) {
     assert.throws(
       () => timestamp(value),
-      (error) => error.code === 'INVALID_DATE',
+      (error) => gogError(error).code === 'INVALID_DATE',
     );
   }
   assert.throws(
     () => timestamp('2099-01-01T00:00:00Z'),
-    (error) => error.code === 'FUTURE_DATE',
+    (error) => gogError(error).code === 'FUTURE_DATE',
   );
 });
 
-test('queues reject resets, duplicate IDs and unknown operation fields', async () => {
+void test('queues reject resets, duplicate IDs and unknown operation fields', async () => {
   const { service } = fixture();
   const queue = await service.createQueue(GAME_ID, [ACHIEVEMENT_ID], DATE);
   assert.throws(() =>
-    validateQueue({ ...queue, items: [{ ...queue.items[0], unlocked_at: null }] }),
+    validateQueue({ ...queue, items: [{ ...queue.items[0]!, unlocked_at: null }] }),
   );
   assert.throws(
-    () => validateQueue({ ...queue, items: [...queue.items, queue.items[0]] }),
-    (error) => error.code === 'DUPLICATE_ACHIEVEMENT',
+    () => validateQueue({ ...queue, items: [...queue.items, queue.items[0]!] }),
+    (error) => gogError(error).code === 'DUPLICATE_ACHIEVEMENT',
   );
   assert.throws(
     () => validateQueue({ ...queue, operation: 'reset' }),
-    (error) => error.code === 'INVALID_QUEUE',
+    (error) => gogError(error).code === 'INVALID_QUEUE',
   );
 });
 
-test('queue files are private, cannot be overwritten on create, and lock competing writes', async (t) => {
+void test('queue files are private, cannot be overwritten on create, and lock competing writes', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'gog-queue-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const file = join(directory, 'queue.json');
@@ -71,38 +76,38 @@ test('queue files are private, cannot be overwritten on create, and lock competi
   if (process.platform !== 'win32') assert.equal((await stat(file)).mode & 0o777, 0o600);
   await assert.rejects(
     saveQueue(file, queue, { create: true }),
-    (error) => error.code === 'QUEUE_EXISTS',
+    (error) => gogError(error).code === 'QUEUE_EXISTS',
   );
   await withQueueLock(file, async () => {
     await assert.rejects(
       withQueueLock(file, async () => {}),
-      (error) => error.code === 'QUEUE_BUSY',
+      (error) => gogError(error).code === 'QUEUE_BUSY',
     );
   });
   assert.deepEqual(await readQueue(file), queue);
-  assert.equal(JSON.parse(await readFile(file, 'utf8')).items.length, 1);
+  assert.equal(jsonValue(await readFile(file, 'utf8'), 'items', 'length'), 1);
 });
 
-test('queue validation normalizes IDs and fractional dates without changing its input', async () => {
+void test('queue validation normalizes IDs and fractional dates without changing its input', async () => {
   const queue = await fixture().service.createQueue(GAME_ID, [ACHIEVEMENT_ID], DATE);
-  queue.user_id = 123;
-  queue.items[0].unlocked_at = '2026-01-01T13:34:56.123+01:00';
-  const result = validateQueue(queue);
+  const rawQueue = { ...queue, user_id: 123 };
+  queue.items[0]!.unlocked_at = '2026-01-01T13:34:56.123+01:00';
+  const result = validateQueue(rawQueue);
   assert.equal(result.user_id, '123');
-  assert.equal(result.items[0].unlocked_at, DATE);
-  assert.equal(queue.items[0].unlocked_at, '2026-01-01T13:34:56.123+01:00');
+  assert.equal(result.items[0]!.unlocked_at, DATE);
+  assert.equal(queue.items[0]!.unlocked_at, '2026-01-01T13:34:56.123+01:00');
 });
 
-test('invalid and missing queue files fail safely; locks are released after failures', async (t) => {
+void test('invalid and missing queue files fail safely; locks are released after failures', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'gog-queue-errors-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const file = join(directory, 'queue.json');
-  await assert.rejects(readQueue(file), (error) => error.code === 'QUEUE_READ_FAILED');
-  await assert.rejects(readQueue(directory), (error) => error.code === 'INVALID_QUEUE');
+  await assert.rejects(readQueue(file), (error) => gogError(error).code === 'QUEUE_READ_FAILED');
+  await assert.rejects(readQueue(directory), (error) => gogError(error).code === 'INVALID_QUEUE');
   const queue = await fixture().service.createQueue(GAME_ID, [ACHIEVEMENT_ID], DATE);
   await assert.rejects(
     saveQueue(join(directory, 'missing', 'queue.json'), queue),
-    (error) => error.code === 'QUEUE_WRITE_FAILED',
+    (error) => gogError(error).code === 'QUEUE_WRITE_FAILED',
   );
   await assert.rejects(
     withQueueLock(file, async () => {
@@ -112,6 +117,6 @@ test('invalid and missing queue files fail safely; locks are released after fail
   await withQueueLock(file, async () => {});
   await assert.rejects(
     withQueueLock(join(directory, 'missing', 'queue.json'), async () => {}),
-    (error) => error.code === 'QUEUE_LOCK_FAILED',
+    (error) => gogError(error).code === 'QUEUE_LOCK_FAILED',
   );
 });

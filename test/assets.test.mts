@@ -1,3 +1,4 @@
+import { gogError } from './assertions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -14,13 +15,13 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { cacheNativeHelper, isPackaged } from '../src/assets.mjs';
 
-function workspace(t) {
+function workspace(t: import('node:test').TestContext) {
   const path = mkdtempSync(join(tmpdir(), 'gog-assets-test-'));
   t.after(() => rmSync(path, { recursive: true, force: true }));
   return path;
 }
 
-test('helper extraction preserves bytes, executable permissions and a stable path', (t) => {
+void test('helper extraction preserves bytes, executable permissions and a stable path', (t) => {
   const root = join(workspace(t), 'components');
   const bytes = Buffer.from('fixture helper');
   const path = cacheNativeHelper(bytes, root, 'gog-login');
@@ -34,7 +35,7 @@ test('helper extraction preserves bytes, executable permissions and a stable pat
   assert.equal(isPackaged(), false);
 });
 
-test('a corrupt cached helper is repaired and temporary files are removed', (t) => {
+void test('a corrupt cached helper is repaired and temporary files are removed', (t) => {
   const root = workspace(t);
   const bytes = Buffer.from('fixture helper');
   const path = cacheNativeHelper(bytes, root, 'gog-login');
@@ -46,16 +47,18 @@ test('a corrupt cached helper is repaired and temporary files are removed', (t) 
   assert.deepEqual(readdirSync(dirname(path)), ['gog-login']);
 });
 
-test('unsafe extraction folders are rejected without revealing paths', (t) => {
+void test('unsafe extraction folders are rejected without revealing paths', (t) => {
   const path = join(workspace(t), 'private-path');
   writeFileSync(path, 'file, not folder');
   assert.throws(
     () => cacheNativeHelper(Buffer.from('fixture helper'), path, 'gog-login'),
-    (error) => error.code === 'BUNDLED_ASSET_FAILED' && !error.message.includes('private-path'),
+    (error) =>
+      gogError(error).code === 'BUNDLED_ASSET_FAILED' &&
+      !gogError(error).message.includes('private-path'),
   );
 });
 
-test(
+void test(
   'helper symlinks are replaced without changing their targets',
   { skip: process.platform === 'win32' },
   (t) => {
@@ -73,7 +76,7 @@ test(
     symlinkSync(dirname(path), linkedRoot);
     assert.throws(
       () => cacheNativeHelper(bytes, linkedRoot, 'gog-login'),
-      (error) => error.code === 'BUNDLED_ASSET_FAILED',
+      (error) => gogError(error).code === 'BUNDLED_ASSET_FAILED',
     );
   },
 );

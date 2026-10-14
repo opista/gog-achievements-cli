@@ -1,3 +1,5 @@
+import { fields } from '../src/validation.mjs';
+import { gogError } from './assertions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
@@ -6,13 +8,13 @@ import { loginWithNativeWindow, runNativeHelper } from '../src/native-login.mjs'
 import { LOGIN_REDIRECT } from '../src/api.mjs';
 import { fixture } from './fixture.mjs';
 
-test("automatic sign-in keeps GOG's registered redirect and saves the captured code", async () => {
+void test("automatic sign-in keeps GOG's registered redirect and saves the captured code", async () => {
   const f = fixture();
   const result = await loginWithNativeWindow({
     service: f.service,
     timeoutMs: 120000,
     runHelper: async (config) => {
-      const loginURL = new URL(config.login_url);
+      const loginURL = new URL(config.login_url!);
       assert.equal(loginURL.hostname, 'auth.gog.com');
       assert.equal(loginURL.searchParams.get('redirect_uri'), LOGIN_REDIRECT);
       assert.equal(loginURL.searchParams.get('state'), config.state);
@@ -23,12 +25,12 @@ test("automatic sign-in keeps GOG's registered redirect and saves the captured c
   assert.equal(result.authenticated, true);
   assert.equal(result.method, 'native_webview');
   assert.equal(f.vault.saved.length, 1);
-  assert.equal(f.calls[0].url.searchParams.get('redirect_uri'), LOGIN_REDIRECT);
+  assert.equal(f.calls[0]!.url.searchParams.get('redirect_uri'), LOGIN_REDIRECT);
   assert.ok(!JSON.stringify(result).includes('test-secret-code'));
   assert.ok(!JSON.stringify(result).includes('fake-refreshed-token'));
 });
 
-test('GOG callbacks without echoed state are supported in the controlled window', async () => {
+void test('GOG callbacks without echoed state are supported in the controlled window', async () => {
   const f = fixture();
   const result = await loginWithNativeWindow({
     service: f.service,
@@ -37,7 +39,7 @@ test('GOG callbacks without echoed state are supported in the controlled window'
   assert.equal(result.authenticated, true);
 });
 
-test('mismatched states and invalid codes are blocked before the token request', async () => {
+void test('mismatched states and invalid codes are blocked before the token request', async () => {
   for (const event of [
     { type: 'code', code: 'test-code', state: 'wrong-state' },
     { type: 'code', code: 'bad\ncode' },
@@ -46,14 +48,14 @@ test('mismatched states and invalid codes are blocked before the token request',
     const f = fixture();
     await assert.rejects(
       loginWithNativeWindow({ service: f.service, runHelper: async () => event }),
-      (error) => ['INVALID_LOGIN_STATE', 'INVALID_LOGIN_RESPONSE'].includes(error.code),
+      (error) => ['INVALID_LOGIN_STATE', 'INVALID_LOGIN_RESPONSE'].includes(gogError(error).code),
     );
     assert.equal(f.calls.length, 0);
     assert.equal(f.vault.saved.length, 0);
   }
 });
 
-test('native cancellation, timeout and page errors keep raw helper data private', async () => {
+void test('native cancellation, timeout and page errors keep raw helper data private', async () => {
   for (const code of ['AUTH_CANCELLED', 'AUTH_TIMEOUT', 'LOGIN_PAGE_FAILED', 'UNRECOGNIZED']) {
     const f = fixture();
     await assert.rejects(
@@ -61,25 +63,31 @@ test('native cancellation, timeout and page errors keep raw helper data private'
         service: f.service,
         runHelper: async () => ({ type: 'error', code, detail: 'private-helper-data' }),
       }),
-      (error) => !error.message.includes('private-helper-data'),
+      (error) => !gogError(error).message.includes('private-helper-data'),
     );
     assert.equal(f.vault.saved.length, 0);
   }
 });
 
 function fakeChild() {
-  const child = new EventEmitter();
+  const child = Object.assign(new EventEmitter(), {
+    stdin: new PassThrough(),
+    stdout: new PassThrough(),
+    stderr: new PassThrough(),
+    killedWith: undefined as NodeJS.Signals | undefined,
+    kill: (_signal: NodeJS.Signals) => {},
+  });
   child.stdin = new PassThrough();
   child.stdout = new PassThrough();
   child.stderr = new PassThrough();
-  child.kill = (signal) => {
+  child.kill = (signal: NodeJS.Signals) => {
     child.killedWith = signal;
     child.emit('close', null);
   };
   return child;
 }
 
-test('native IPC captures private stdout, ignores diagnostics and uses no credential arguments', async () => {
+void test('native IPC captures private stdout, ignores diagnostics and uses no credential arguments', async () => {
   const result = await runNativeHelper(
     { login_url: 'public-login-url', state: 'test-state', timeout_ms: 1000 },
     {
@@ -96,12 +104,12 @@ test('native IPC captures private stdout, ignores diagnostics and uses no creden
       },
     },
   );
-  assert.equal(result.code, 'test-secret-code');
+  assert.equal(fields(result).code, 'test-secret-code');
 });
 
-test('cancelling a pending native window kills the helper process', async () => {
+void test('cancelling a pending native window kills the helper process', async () => {
   const abort = new AbortController();
-  let child;
+  let child: ReturnType<typeof fakeChild> | undefined;
   const pending = runNativeHelper(
     { timeout_ms: 1000 },
     {
@@ -113,11 +121,11 @@ test('cancelling a pending native window kills the helper process', async () => 
       },
     },
   );
-  await assert.rejects(pending, (error) => error.code === 'AUTH_CANCELLED');
-  assert.equal(child.killedWith, 'SIGKILL');
+  await assert.rejects(pending, (error) => gogError(error).code === 'AUTH_CANCELLED');
+  assert.equal(child!.killedWith, 'SIGKILL');
 });
 
-test('a missing helper gives a build instruction without a process error dump', async () => {
+void test('a missing helper gives a build instruction without a process error dump', async () => {
   await assert.rejects(
     runNativeHelper(
       { timeout_ms: 1000 },
@@ -132,18 +140,20 @@ test('a missing helper gives a build instruction without a process error dump', 
         },
       },
     ),
-    (error) => error.code === 'NATIVE_HELPER_MISSING' && error.message.includes('npm run build'),
+    (error) =>
+      gogError(error).code === 'NATIVE_HELPER_MISSING' &&
+      gogError(error).message.includes('npm run build'),
   );
 });
 
-test('malformed, oversized and failed native responses cannot become login codes', async () => {
+void test('malformed, oversized and failed native responses cannot become login codes', async () => {
   for (const [output, code, expected] of [
     ['', 0, 'AUTH_CANCELLED'],
     ['', 7, 'NATIVE_HELPER_FAILED'],
     ['private-code', 0, 'INVALID_LOGIN_RESPONSE'],
     [JSON.stringify({ type: 'code', code: 'private-code' }), 7, 'NATIVE_HELPER_FAILED'],
     ['é'.repeat(9000), 0, 'INVALID_LOGIN_RESPONSE'],
-  ]) {
+  ] satisfies [string, number, string][]) {
     await assert.rejects(
       runNativeHelper(
         { timeout_ms: 1000 },
@@ -158,12 +168,13 @@ test('malformed, oversized and failed native responses cannot become login codes
           },
         },
       ),
-      (error) => error.code === expected && !error.message.includes('private-code'),
+      (error) =>
+        gogError(error).code === expected && !gogError(error).message.includes('private-code'),
     );
   }
 });
 
-test('native process timeout maps to an auth timeout and pre-cancellation never opens a window', async () => {
+void test('native process timeout maps to an auth timeout and pre-cancellation never opens a window', async () => {
   const { GogError } = await import('../src/errors.mjs');
   await assert.rejects(
     runNativeHelper(
@@ -174,13 +185,14 @@ test('native process timeout maps to an auth timeout and pre-cancellation never 
         },
       },
     ),
-    (error) => error.code === 'AUTH_TIMEOUT' && !error.message.includes('private'),
+    (error) =>
+      gogError(error).code === 'AUTH_TIMEOUT' && !gogError(error).message.includes('private'),
   );
   await assert.rejects(
     runNativeHelper(
       { timeout_ms: 1000 },
       { signal: AbortSignal.abort(), spawnImpl: () => assert.fail('Must not open a window') },
     ),
-    (error) => error.code === 'AUTH_CANCELLED',
+    (error) => gogError(error).code === 'AUTH_CANCELLED',
   );
 });

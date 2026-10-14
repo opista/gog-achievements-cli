@@ -1,3 +1,13 @@
+import type {
+  Session,
+  Game,
+  Achievement,
+  LibraryGame,
+  FetchImpl,
+  LoginOptions,
+  SignalOptions,
+} from './types.mjs';
+import { fields, requiredFields, isArray } from './validation.mjs';
 import { VERSION } from './version.mjs';
 import { GogError, requireValue } from './errors.mjs';
 import { id, parseJSON, timestamp } from './data.mjs';
@@ -6,7 +16,7 @@ import { id, parseJSON, timestamp } from './data.mjs';
 const GALAXY_CLIENT_ID = '46899977096215655';
 const GALAXY_CLIENT_SECRET = '9d85c43b1482497dbbce61f6e4aa173a433796eeae2ca8c5f6129f2dc4de46d9';
 export const LOGIN_REDIRECT = 'https://embed.gog.com/on_login_success?origin=client';
-export function buildLoginURL({ redirectURI = LOGIN_REDIRECT, state } = {}) {
+export function buildLoginURL({ redirectURI = LOGIN_REDIRECT, state }: LoginOptions = {}) {
   return `https://auth.gog.com/auth?${new URLSearchParams({
     client_id: GALAXY_CLIENT_ID,
     redirect_uri: redirectURI,
@@ -18,12 +28,25 @@ export function buildLoginURL({ redirectURI = LOGIN_REDIRECT, state } = {}) {
 export const LOGIN_URL = buildLoginURL();
 
 export class GogAPI {
-  constructor({ fetchImpl = globalThis.fetch, timeoutMs = 15_000 } = {}) {
+  fetch: FetchImpl;
+  timeoutMs: number;
+  constructor({
+    fetchImpl = globalThis.fetch,
+    timeoutMs = 15_000,
+  }: { fetchImpl?: FetchImpl; timeoutMs?: number } = {}) {
     this.fetch = fetchImpl;
     this.timeoutMs = timeoutMs;
   }
 
-  async request(url, { token, body, empty = false, signal } = {}) {
+  async request(
+    url: string,
+    {
+      token,
+      body,
+      empty = false,
+      signal,
+    }: SignalOptions & { token?: string | undefined; body?: unknown; empty?: boolean } = {},
+  ): Promise<unknown> {
     let response;
     try {
       response = await this.fetch(url, {
@@ -89,14 +112,17 @@ export class GogAPI {
     }
   }
 
-  async authorize(parameters, { signal } = {}) {
+  async authorize(
+    parameters: Record<string, string>,
+    { signal }: SignalOptions = {},
+  ): Promise<Session> {
     const url = new URL('https://auth.gog.com/token');
     url.search = new URLSearchParams({
       client_id: GALAXY_CLIENT_ID,
       client_secret: GALAXY_CLIENT_SECRET,
       ...parameters,
     }).toString();
-    const data = await this.request(url.href, { signal });
+    const data = fields(await this.request(url.href, { signal }));
     requireValue(
       typeof data?.access_token === 'string' &&
         data.access_token &&
@@ -116,14 +142,14 @@ export class GogAPI {
     };
   }
 
-  exchangeCode(code, redirectURI = LOGIN_REDIRECT, { signal } = {}) {
+  exchangeCode(code: string, redirectURI = LOGIN_REDIRECT, { signal }: SignalOptions = {}) {
     return this.authorize(
       { grant_type: 'authorization_code', redirect_uri: redirectURI, code },
       { signal },
     );
   }
 
-  refresh(refreshToken, game) {
+  refresh(refreshToken: string, game?: Game) {
     return this.authorize({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
@@ -133,10 +159,10 @@ export class GogAPI {
     });
   }
 
-  async ownedIDs(token) {
-    const data = await this.request('https://embed.gog.com/user/data/games', { token });
+  async ownedIDs(token: string) {
+    const data = fields(await this.request('https://embed.gog.com/user/data/games', { token }));
     requireValue(
-      Array.isArray(data?.owned),
+      isArray(data.owned),
       'INVALID_RESPONSE',
       'GOG returned an invalid owned-game list.',
       4,
@@ -144,8 +170,8 @@ export class GogAPI {
     return [...new Set(data.owned.map((value) => id(value, 'Game ID')))];
   }
 
-  async games(token, search = '') {
-    const games = new Map();
+  async games(token: string, search = ''): Promise<LibraryGame[]> {
+    const games = new Map<string, LibraryGame>();
     let expectedPages;
     for (let page = 1; page <= 100; page++) {
       const url = new URL('https://embed.gog.com/account/getFilteredProducts');
@@ -155,10 +181,10 @@ export class GogAPI {
         page: String(page),
         ...(search ? { search } : {}),
       }).toString();
-      const data = await this.request(url.href, { token });
+      const data = fields(await this.request(url.href, { token }));
       const pages = Number(data?.totalPages);
       requireValue(
-        Array.isArray(data?.products) && Number.isInteger(pages) && pages >= 0 && pages <= 100,
+        isArray(data.products) && Number.isInteger(pages) && pages >= 0 && pages <= 100,
         'INVALID_RESPONSE',
         'GOG returned an invalid game-library page.',
         4,
@@ -170,7 +196,8 @@ export class GogAPI {
         'The game library changed during paging. Retry the read.',
         4,
       );
-      for (const game of data.products) {
+      for (const raw of data.products) {
+        const game = requiredFields(raw);
         const gameID = id(game.id, 'Game ID');
         requireValue(
           typeof game.title === 'string' && !games.has(gameID),
@@ -191,31 +218,36 @@ export class GogAPI {
     throw new GogError('INCOMPLETE_RESPONSE', 'The game library exceeds the paging limit.');
   }
 
-  async game(gameID) {
-    gameID = id(gameID, 'Game ID');
-    const product = await this.request(
-      `https://www.gogdb.org/data/products/${gameID}/product.json`,
+  async game(gameID: unknown): Promise<Game> {
+    const normalizedID = id(gameID, 'Game ID');
+    const product = fields(
+      await this.request(`https://www.gogdb.org/data/products/${normalizedID}/product.json`),
     );
     requireValue(
-      Array.isArray(product?.builds),
+      isArray(product.builds),
       'INVALID_RESPONSE',
       'The game build list is not valid.',
       4,
     );
     const builds = product.builds
+      .map(requiredFields)
       .filter(
         (build) => build.listed && typeof build.date_published === 'string' && build.date_published,
       )
-      .sort((left, right) => right.date_published.localeCompare(left.date_published));
+      .sort((left, right) =>
+        String(right.date_published).localeCompare(String(left.date_published)),
+      );
     requireValue(
       builds.length,
       'NO_GALAXY_BUILD',
       'No published Galaxy build was found for this game.',
       4,
     );
-    const buildID = id(builds[0].id, 'Build ID');
-    const build = await this.request(
-      `https://www.gogdb.org/data/products/${gameID}/builds/${buildID}.json`,
+    const buildID = id(builds[0]!.id, 'Build ID');
+    const build = fields(
+      await this.request(
+        `https://www.gogdb.org/data/products/${normalizedID}/builds/${buildID}.json`,
+      ),
     );
     requireValue(
       typeof product.title === 'string' &&
@@ -226,15 +258,18 @@ export class GogAPI {
       4,
     );
     return {
-      id: gameID,
+      id: normalizedID,
       title: product.title,
       client_id: id(build.clientId, 'Client ID'),
       client_secret: build.clientSecret,
     };
   }
 
-  async achievements(game, session) {
-    const items = new Map();
+  async achievements(
+    game: Pick<Game, 'client_id'>,
+    session: Pick<Session, 'user_id'> & Partial<Pick<Session, 'access_token'>>,
+  ): Promise<Achievement[]> {
+    const items = new Map<string, Achievement>();
     let pageToken = '0';
     let expectedTotal;
     const visitedTokens = new Set();
@@ -243,9 +278,9 @@ export class GogAPI {
         `https://gameplay.gog.com/clients/${id(game.client_id)}/users/${id(session.user_id)}/achievements`,
       );
       if (page) url.searchParams.set('page_token', pageToken);
-      const data = await this.request(url.href, { token: session.access_token });
+      const data = fields(await this.request(url.href, { token: session.access_token }));
       requireValue(
-        Array.isArray(data?.items),
+        isArray(data.items),
         'INVALID_RESPONSE',
         'GOG returned an invalid achievement list.',
         4,
@@ -264,7 +299,8 @@ export class GogAPI {
         'The achievement list changed during paging.',
         4,
       );
-      for (const item of data.items) {
+      for (const raw of data.items) {
+        const item = requiredFields(raw);
         const achievementID = id(item.achievement_id, 'Achievement ID');
         requireValue(
           !items.has(achievementID) &&
@@ -277,13 +313,16 @@ export class GogAPI {
           'GOG returned an invalid or duplicate achievement.',
           4,
         );
+        const state =
+          item.date_unlocked === null
+            ? { unlocked: false as const, unlocked_at: null }
+            : { unlocked: true as const, unlocked_at: item.date_unlocked };
         items.set(achievementID, {
           id: achievementID,
           key: item.achievement_key,
           name: item.name,
           description: typeof item.description === 'string' ? item.description : '',
-          unlocked: item.date_unlocked !== null,
-          unlocked_at: item.date_unlocked,
+          ...state,
           hidden: item.visible === false,
           image_locked: item.image_url_locked ?? null,
           image_unlocked: item.image_url_unlocked ?? null,
@@ -309,7 +348,12 @@ export class GogAPI {
     throw new GogError('INCOMPLETE_RESPONSE', 'The achievement list exceeds the paging limit.');
   }
 
-  async unlock(game, session, achievementID, unlockedAt) {
+  async unlock(
+    game: Pick<Game, 'client_id'>,
+    session: Pick<Session, 'user_id' | 'access_token'>,
+    achievementID: string,
+    unlockedAt: string,
+  ) {
     const date = timestamp(unlockedAt).replace(/Z$/, '+0000');
     return this.request(
       `https://gameplay.gog.com/clients/${id(game.client_id)}/users/${id(session.user_id)}/achievements/${id(achievementID)}`,

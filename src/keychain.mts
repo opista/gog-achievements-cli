@@ -1,3 +1,12 @@
+import type { ProcessRunner, CredentialOptions, CredentialVault } from './types.mjs';
+import { fields } from './validation.mjs';
+export interface VaultOptions {
+  platform?: string;
+  execute?: ProcessRunner;
+  helperPath?: string | (() => string);
+  service?: string;
+  account?: string;
+}
 import { GogError } from './errors.mjs';
 import { nativeHelperPath } from './assets.mjs';
 import { runProcess } from './process.mjs';
@@ -23,14 +32,20 @@ const PROFILES = {
 };
 
 class NativeVault {
+  platform: 'darwin' | 'win32';
+  profile: (typeof PROFILES)['darwin' | 'win32'];
+  storage: string;
+  execute: ProcessRunner;
+  helperPath: string | (() => string);
+  keychainIdentity: { service: string; account: string };
   constructor(
-    platform,
+    platform: 'darwin' | 'win32',
     {
       execute = runProcess,
       helperPath = () => nativeHelperPath(platform),
       service = 'gog-achievements-cli',
       account = 'default',
-    } = {},
+    }: VaultOptions = {},
   ) {
     this.platform = platform;
     this.profile = PROFILES[platform];
@@ -40,7 +55,11 @@ class NativeVault {
     this.keychainIdentity = { service, account };
   }
 
-  async invoke(action, secret, { interactive = false, signal } = {}) {
+  async invoke(
+    action: 'get' | 'set' | 'remove',
+    secret?: string,
+    { interactive = false, signal }: CredentialOptions = {},
+  ) {
     try {
       const path = typeof this.helperPath === 'function' ? this.helperPath() : this.helperPath;
       const request = {
@@ -56,7 +75,8 @@ class NativeVault {
         timeoutMs,
         signal,
       });
-      const event = JSON.parse(result.stdout);
+      const decoded: unknown = JSON.parse(result.stdout);
+      const event = fields(decoded);
       if (result.code !== 0 || event?.type !== 'vault') throw new Error();
       return event;
     } catch {
@@ -69,7 +89,8 @@ class NativeVault {
     if (secret === null) return null;
     try {
       if (typeof secret !== 'string') throw new Error();
-      return JSON.parse(secret);
+      const decoded: unknown = JSON.parse(secret);
+      return decoded;
     } catch {
       throw new GogError(
         'INVALID_CREDENTIALS',
@@ -79,7 +100,7 @@ class NativeVault {
     }
   }
 
-  async set(session, { interactive = false, signal } = {}) {
+  async set(session: unknown, { interactive = false, signal }: CredentialOptions = {}) {
     const secret = JSON.stringify(session);
     const timeout = AbortSignal.timeout(
       this.platform === 'darwin' && interactive
@@ -103,23 +124,26 @@ class NativeVault {
 }
 
 export class MacKeychain extends NativeVault {
-  constructor(options = {}) {
+  constructor(options: VaultOptions = {}) {
     super('darwin', options);
   }
 }
 
 export class WindowsVault extends NativeVault {
-  constructor(options = {}) {
+  constructor(options: VaultOptions = {}) {
     super('win32', options);
   }
 }
 
-export function credentialVault(options = {}) {
+export function credentialVault(
+  options: VaultOptions & { platform?: string } = {},
+): CredentialVault {
   const platform = options.platform ?? process.platform;
   if (platform === 'darwin') return new MacKeychain(options);
   if (platform === 'win32') return new WindowsVault(options);
-  const unavailable = async () => {
-    throw new GogError('UNSUPPORTED_PLATFORM', 'This tool supports macOS and Windows.', 7);
-  };
+  const unavailable = () =>
+    Promise.reject(
+      new GogError('UNSUPPORTED_PLATFORM', 'This tool supports macOS and Windows.', 7),
+    );
   return { storage: 'unsupported', get: unavailable, set: unavailable, remove: unavailable };
 }

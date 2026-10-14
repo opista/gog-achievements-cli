@@ -1,3 +1,4 @@
+import type { FlagSpec, CommandSpec, CommandName, HelpData } from './types.mjs';
 import { VERSION } from './version.mjs';
 
 export const FLAGS = {
@@ -25,7 +26,7 @@ export const FLAGS = {
   json: { description: 'Return one compact JSON object for AI tools and scripts.' },
   pretty: { description: 'Keep readable text, or indent JSON when used with --json.' },
   help: { short: 'h', description: 'Show help for this command. Also accepts -h.' },
-};
+} as const satisfies Record<string, FlagSpec>;
 
 export const COMMANDS = {
   'auth login': {
@@ -79,9 +80,12 @@ export const COMMANDS = {
     description: 'Preview a queue. Use --yes to apply it to GOG.',
   },
   doctor: { flags: [], description: 'Check Node, platform support and saved login availability.' },
-};
+} satisfies Record<CommandName, CommandSpec>;
 
-const EXAMPLES = {
+export const commandDefinitions: Record<string, CommandSpec | undefined> = COMMANDS;
+const flagDefinitions: Record<string, FlagSpec> = FLAGS;
+
+const EXAMPLES: Record<string, string[]> = {
   'auth login': ['auth login', 'auth login --timeout 300'],
   'auth status': ['auth status'],
   'auth logout': ['auth logout'],
@@ -106,8 +110,8 @@ const EXAMPLES = {
   doctor: ['doctor'],
 };
 
-export function flagUsage(name) {
-  return `--${name}${FLAGS[name].value ? ` ${FLAGS[name].value}` : ''}`;
+export function flagUsage(name: string) {
+  return `--${name}${flagDefinitions[name]?.value ? ` ${flagDefinitions[name]?.value}` : ''}`;
 }
 
 export const HELP = {
@@ -133,15 +137,19 @@ export const HELP = {
   ],
 };
 
-export function commandHelp(topic = '') {
+export function commandHelp(topic = ''): HelpData | null {
   const commands = HELP.commands.filter(
     (spec) => !topic || spec.command === topic || spec.command.startsWith(`${topic} `),
   );
   if (!commands.length) return null;
-  const spec = COMMANDS[topic];
+  const spec = commandDefinitions[topic];
   const options = [
     ...new Set([...commands.flatMap((command) => command.flags), 'json', 'pretty', 'help']),
-  ].map((name) => ({ flag: name, ...FLAGS[name], required: !!spec?.required?.includes(name) }));
+  ].map((name) => ({
+    flag: name,
+    ...flagDefinitions[name]!,
+    required: !!spec?.required?.includes(name),
+  }));
   return {
     ...HELP,
     ...(topic ? { topic } : {}),
@@ -151,7 +159,7 @@ export function commandHelp(topic = '') {
       ? `gog-achievements ${topic}${(spec.required ?? []).map((name) => ` ${flagUsage(name)}`).join('')} [options]`
       : `gog-achievements${topic ? ` ${topic}` : ''} <command> [options]`,
     examples: spec
-      ? EXAMPLES[topic].map((example) => `gog-achievements ${example}`)
+      ? EXAMPLES[topic]!.map((example) => `gog-achievements ${example}`)
       : topic
         ? commands
             .flatMap((command) => (EXAMPLES[command.command] ?? []).slice(0, 1))

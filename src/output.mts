@@ -1,15 +1,27 @@
+import type {
+  CLIOutcome,
+  SuccessOutcome,
+  HelpData,
+  AuthStatus,
+  ManualLogin,
+  GamesResult,
+  AchievementsResult,
+  Queue,
+  RestorationReport,
+  PublicError,
+} from './types.mjs';
 import { stripVTControlCharacters } from 'node:util';
 import { flagUsage } from './help.mjs';
 
 // GOG titles and queue fields are data, not terminal control sequences.
-function text(value) {
+function text(value: unknown) {
   return stripVTControlCharacters(String(value ?? ''))
     .replace(/[\x00-\x1f\x7f-\x9f]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-function wrap(value, width) {
+function wrap(value: unknown, width: number) {
   const words = text(value).split(' ');
   const lines = [];
   let line = '';
@@ -28,13 +40,13 @@ function wrap(value, width) {
   return lines;
 }
 
-function paragraph(value, width, indent = '') {
+function paragraph(value: unknown, width: number, indent = '') {
   return wrap(value, width - indent.length)
     .map((line) => `${indent}${line}`)
     .join('\n');
 }
 
-function definitions(rows, width) {
+function definitions(rows: readonly (readonly unknown[])[], width: number) {
   if (!rows.length) return '';
   const labelWidth = Math.max(...rows.map(([label]) => text(label).length));
   if (labelWidth + 24 > width)
@@ -54,11 +66,15 @@ function definitions(rows, width) {
     .join('\n');
 }
 
-function table(columns, rows, width) {
+function table(
+  columns: { label: string; wrap?: boolean; min?: number }[],
+  rows: unknown[][],
+  width: number,
+) {
   if (!rows.length) return '';
   const values = rows.map((row) => row.map(text));
   const sizes = columns.map((column, index) =>
-    Math.max(column.label.length, ...values.map((row) => row[index].length)),
+    Math.max(column.label.length, ...values.map((row) => row[index]!.length)),
   );
   const gap = 2;
   const available = width - gap * (columns.length - 1);
@@ -66,9 +82,9 @@ function table(columns, rows, width) {
     let index = -1;
     for (let i = 0; i < sizes.length; i++) {
       if (
-        columns[i].wrap &&
-        sizes[i] > (columns[i].min ?? columns[i].label.length) &&
-        (index < 0 || sizes[i] > sizes[index])
+        columns[i]!.wrap &&
+        sizes[i]! > (columns[i]!.min ?? columns[i]!.label.length) &&
+        (index < 0 || sizes[i]! > sizes[index]!)
       )
         index = i;
     }
@@ -76,15 +92,15 @@ function table(columns, rows, width) {
       // Keep IDs and dates intact when the terminal is too narrow for columns.
       return values
         .map((row) =>
-          row.map((value, i) => paragraph(`${columns[i].label}: ${value}`, width)).join('\n'),
+          row.map((value, i) => paragraph(`${columns[i]!.label}: ${value}`, width)).join('\n'),
         )
         .join('\n\n');
     }
-    sizes[index]--;
+    sizes[index]!--;
   }
-  const line = (row) =>
+  const line = (row: readonly string[]) =>
     row
-      .map((value, i) => value.padEnd(sizes[i]))
+      .map((value, i) => value.padEnd(sizes[i]!))
       .join('  ')
       .trimEnd();
   const result = [
@@ -92,14 +108,14 @@ function table(columns, rows, width) {
     line(sizes.map((size) => '-'.repeat(size))),
   ];
   for (const row of values) {
-    const cells = row.map((value, i) => (columns[i].wrap ? wrap(value, sizes[i]) : [value]));
+    const cells = row.map((value, i) => (columns[i]!.wrap ? wrap(value, sizes[i]!) : [value]));
     for (let i = 0; i < Math.max(...cells.map((cell) => cell.length)); i++)
       result.push(line(cells.map((cell) => cell[i] ?? '')));
   }
   return result.join('\n');
 }
 
-function date(value) {
+function date(value: string | null | undefined) {
   if (!value) return '-';
   const parsed = new Date(value);
   return Number.isFinite(parsed.getTime())
@@ -107,13 +123,13 @@ function date(value) {
     : text(value);
 }
 
-function help(data, width) {
+function help(data: HelpData, width: number) {
   const lines = [
     `${data.name} ${data.version}${data.topic ? ` - ${data.topic}` : ''}`,
     '',
     paragraph(
       data.commands.length === 1
-        ? data.commands[0].description
+        ? data.commands[0]!.description
         : 'Restore GOG achievements you already earned.',
       width,
     ),
@@ -178,9 +194,9 @@ function help(data, width) {
   return lines.join('\n');
 }
 
-function login(data, width) {
+function login(data: AuthStatus | ManualLogin, width: number) {
   if (data.local_login_removed) return 'Saved login removed from this tool.';
-  if (data.action_required)
+  if ('action_required' in data && data.action_required)
     return [
       paragraph(data.instructions, width),
       '',
@@ -200,7 +216,7 @@ function login(data, width) {
   ].join('\n');
 }
 
-function games(data, width) {
+function games(data: GamesResult, width: number) {
   if (!data.games.length) return 'No games found.';
   if (data.games.every((game) => game.title === undefined))
     return `${data.count} owned game IDs\n\n${data.games.map((game) => text(game.id)).join('\n')}`;
@@ -215,7 +231,7 @@ function games(data, width) {
   ].join('\n');
 }
 
-function achievements(data, width) {
+function achievements(data: AchievementsResult, width: number) {
   const unlocked = data.achievements.filter((item) => item.unlocked).length;
   return [
     text(data.game.title),
@@ -252,7 +268,12 @@ const QUEUE_ACTIONS = {
   'queue show': 'Queue',
 };
 
-function queue(data, command, file, width) {
+function queue(
+  data: Queue,
+  command: keyof typeof QUEUE_ACTIONS,
+  file: string | undefined,
+  width: number,
+) {
   return [
     `${QUEUE_ACTIONS[command] ?? 'Queue'}: ${text(data.game.title)}`,
     ...(file ? [`File: ${text(file)}`] : []),
@@ -285,7 +306,7 @@ const STATUSES = {
   not_attempted: 'Not attempted',
 };
 
-function report(data, width) {
+function report(data: RestorationReport, width: number) {
   const lines = [
     paragraph(
       `${data.dry_run ? 'Queue preview' : data.complete ? 'Apply complete' : 'Apply incomplete'}: ${data.game.title}`,
@@ -309,38 +330,76 @@ function report(data, width) {
   return lines.join('\n').trimEnd();
 }
 
-function failure(error, width) {
+function failure(error: PublicError, width: number) {
   const lines = [paragraph(`Error [${error.code}]: ${error.message}`, width)];
   if (error.details?.report) lines.push('', report(error.details.report, width));
   else
     for (const [name, value] of Object.entries(error.details ?? {})) {
-      if (value === null || ['string', 'number', 'boolean'].includes(typeof value))
+      if (
+        value === null ||
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      )
         lines.push(paragraph(`${name}: ${value}`, width));
     }
   return lines.join('\n');
 }
 
-export function formatOutput(outcome, { columns = 100 } = {}) {
+function isSuccess(outcome: CLIOutcome): outcome is SuccessOutcome {
+  return outcome.result.ok;
+}
+
+export function formatOutput(
+  outcome: CLIOutcome,
+  { columns = 100 }: { columns?: number | undefined } = {},
+) {
   if (outcome.format === 'json')
     return `${JSON.stringify(outcome.result, null, outcome.pretty ? 2 : undefined)}\n`;
   const width = Math.max(40, Math.min(Number.isFinite(columns) ? columns : 100, 140));
-  const { result, command, file } = outcome;
-  let body;
-  if (!result.ok) body = failure(result.error, width);
-  else if (command === 'help') body = help(result.data, width);
-  else if (command?.startsWith('auth ')) body = login(result.data, width);
-  else if (command === 'games list') body = games(result.data, width);
-  else if (command === 'achievements list') body = achievements(result.data, width);
-  else if (command === 'queue apply') body = report(result.data, width);
-  else if (command?.startsWith('queue ')) body = queue(result.data, command, file, width);
-  else if (command === 'doctor') {
-    const data = result.data;
-    body = [
-      `${data.supported ? 'Supported' : 'Unsupported'} platform: ${text(data.platform)} (${text(data.architecture)})`,
-      `Node: ${text(data.node)}`,
-      `Credential store: ${(data.credentials_available ?? data.keychain_available) ? 'available' : 'unavailable'}`,
-      data.login.code ? `Login check: ${text(data.login.message)}` : login(data.login, width),
-    ].join('\n');
-  } else body = 'Command completed. Use --json for full details.';
+  if (!isSuccess(outcome)) return `${failure(outcome.result.error, width)}\n`;
+  let body: string;
+  switch (outcome.command) {
+    case 'help':
+      body = help(outcome.result.data, width);
+      break;
+    case 'auth login':
+    case 'auth status':
+    case 'auth logout':
+    case 'auth finish':
+    case 'auth import':
+      body = login(outcome.result.data, width);
+      break;
+    case 'games list':
+      body = games(outcome.result.data, width);
+      break;
+    case 'achievements list':
+      body = achievements(outcome.result.data, width);
+      break;
+    case 'queue apply':
+      body = report(outcome.result.data, width);
+      break;
+    case 'queue create':
+    case 'queue add':
+    case 'queue remove':
+    case 'queue set-date':
+    case 'queue show':
+      body = queue(outcome.result.data, outcome.command, outcome.file, width);
+      break;
+    case 'doctor': {
+      const data = outcome.result.data;
+      body = [
+        `${data.supported ? 'Supported' : 'Unsupported'} platform: ${text(data.platform)} (${text(data.architecture)})`,
+        `Node: ${text(data.node)}`,
+        `Credential store: ${(data.credentials_available ?? data.keychain_available) ? 'available' : 'unavailable'}`,
+        'code' in data.login
+          ? `Login check: ${text(data.login.message)}`
+          : login(data.login, width),
+      ].join('\n');
+      break;
+    }
+    default:
+      body = 'Command completed. Use --json for full details.';
+  }
   return `${body}\n`;
 }
