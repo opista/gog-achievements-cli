@@ -1,5 +1,7 @@
 import type { CommandData, QueueItem } from '../src/types.mjs';
 import type { GogAPI } from '../src/api.mjs';
+import type { ParsedCommand } from '../src/cli/parse.mjs';
+import type { QueueView } from '../src/domain/queue.mjs';
 
 // This file is compiled but never executed. Unused expectations fail compilation.
 export function typeContracts(api: GogAPI, item: QueueItem, games: CommandData['games list']) {
@@ -10,4 +12,12 @@ export function typeContracts(api: GogAPI, item: QueueItem, games: CommandData['
   // @ts-expect-error The HTTP adapter must never accept a null unlock date.
   void api.unlock({ client_id: '1' }, { user_id: '1', access_token: 'test' }, '1', null);
   return achievements;
+}
+
+export function architectureTypes(queue: QueueView): ParsedCommand {
+  // @ts-expect-error Domain views prevent mutation of the input queue.
+  queue.items[0]!.unlocked_at = '2026-01-01T00:00:00Z';
+  // @ts-expect-error A parsed queue command must have its required file flag.
+  const command: ParsedCommand = { command: 'queue show', flags: {} };
+  return command;
 }
