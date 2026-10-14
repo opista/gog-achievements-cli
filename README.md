@@ -94,6 +94,8 @@ gog-achievements auth login
 
 Complete sign-in in the **Sign in to GOG** window that opens. The same command captures GOG's registered callback, closes the window, saves your login in the native credential store and confirms sign-in. With `--json`, it returns `authenticated: true`. It requires no copied URL or second command. On macOS, the window uses a nonpersistent WebKit session. Windows uses an InPrivate WebView2 profile in a temporary data folder and attempts to remove that folder when the window closes.
 
+GOG can keep **Log in now** disabled until its Cloudflare Turnstile check completes. The native window allows HTTPS challenge frames and the embedded documents required by [Turnstile's WebView guidance](https://developers.cloudflare.com/turnstile/get-started/mobile-implementation/). If the check fails, close the window and retry sign-in.
+
 The command waits up to three minutes for sign-in. Use `auth login --timeout 300` to allow five minutes. Close the window or press Ctrl+C to cancel. Progress appears on stderr; stdout contains the final result.
 
 GOG's Galaxy OAuth client rejects local callback URLs with `redirect_uri_mismatch`. The native window keeps the registered GOG redirect URL and intercepts it inside the native web view. It captures only the GOG callback in the main window and validates OAuth state when GOG returns it.

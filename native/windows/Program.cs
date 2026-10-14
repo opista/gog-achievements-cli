@@ -130,7 +130,7 @@ internal sealed class LoginWindow : Form
             };
             view.CoreWebView2.FrameNavigationStarting += (_, eventArgs) =>
             {
-                if (eventArgs.Uri != "about:blank" && (!Uri.TryCreate(eventArgs.Uri, UriKind.Absolute, out var uri) || uri.Scheme != "https"))
+                if (!LoginProtocol.Allowed(eventArgs.Uri, isMainFrame: false))
                     eventArgs.Cancel = true;
             };
             view.CoreWebView2.NewWindowRequested += (_, eventArgs) =>
