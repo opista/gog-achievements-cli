@@ -11,6 +11,8 @@ import { BUILD_HELP, parseBuildArguments, selectBuildTarget } from './build-targ
 
 const execute = promisify(execFile);
 const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
+// Bundled Node/.NET compression exceeded 30 seconds on the Windows x64 runner.
+const WINDOWS_ARCHIVE_TIMEOUT_MS = 120000;
 
 /** @param {string} executable @param {string} bundle @param {string} staging @param {string} helper @param {string} platform */
 async function packageSingleExecutable(executable, bundle, staging, helper, platform) {
@@ -108,7 +110,7 @@ async function createArchive(folder, folderName, platform) {
         '-Command',
         `Compress-Archive -LiteralPath ${quote(folder)} -DestinationPath ${quote(archive)}`,
       ],
-      { timeout: 30000 },
+      { timeout: WINDOWS_ARCHIVE_TIMEOUT_MS },
     );
   }
   const checksum = createHash('sha256')
