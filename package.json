@@ -10,10 +10,13 @@
   "bin": {
     "gog-achievements": "bin/gog-achievements.mjs"
   },
-  "exports": "./src/index.mjs",
+  "exports": {
+    "types": "./.build/typescript/src/index.d.mts",
+    "default": "./src/index.mjs"
+  },
   "files": [
     "bin",
-    "src",
+    "src/index.mjs",
     "native/bin",
     "native/gog-login.swift",
     "native/windows",
@@ -23,25 +26,34 @@
     "THIRD_PARTY_NOTICES.md",
     "global.json",
     "licenses",
-    "native/launcher.c"
+    "native/launcher.c",
+    ".build/typescript/src",
+    ".build/typescript/package.json"
   ],
   "scripts": {
-    "start": "node bin/gog-achievements.mjs",
+    "start": "npm run compile && node bin/gog-achievements.mjs",
     "test": "node scripts/test.mjs",
-    "check": "node scripts/check.mjs && npm run lint && npm run format:check",
-    "demo": "node scripts/demo.mjs",
+    "check": "npm run compile && npm run typecheck && npm run typecheck:tooling && node scripts/check.mjs && npm run lint && npm run format:check",
+    "demo": "npm run compile && node .build/typescript/scripts/demo.mjs",
     "build": "node scripts/build.mjs",
     "lint": "eslint .",
     "format:check": "prettier --check . --ignore-unknown",
     "format": "prettier --write . --ignore-unknown",
-    "test:coverage": "node scripts/test.mjs --coverage"
+    "test:coverage": "node scripts/test.mjs --coverage",
+    "compile": "node scripts/compile.mjs",
+    "typecheck": "tsc -p tsconfig.app.json",
+    "typecheck:tooling": "tsc -p tsconfig.tooling.json",
+    "verify:package": "node scripts/verify-source-package.mjs"
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "22.20.5",
     "esbuild": "0.28.2",
     "eslint": "10.12.0",
     "postject": "1.0.0-alpha.6",
-    "prettier": "3.9.10"
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2"
   },
   "repository": {
     "type": "git",

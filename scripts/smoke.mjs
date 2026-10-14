@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 
 const execute = promisify(execFile);
-const executable = resolve(process.argv[2]);
+const executable = resolve(/** @type {string} */ (process.argv[2]));
 const directory = await mkdtemp(join(tmpdir(), 'gog-cli-smoke-'));
 try {
   const options = {
@@ -45,8 +45,9 @@ try {
     await execute(executable, ['unknown-command', '--json'], options);
     assert.fail('Unknown command must fail');
   } catch (error) {
+    assert.ok(error instanceof Error && 'code' in error && 'stdout' in error);
     assert.equal(error.code, 2);
-    assert.equal(JSON.parse(error.stdout).error.code, 'UNKNOWN_COMMAND');
+    assert.equal(JSON.parse(String(error.stdout)).error.code, 'UNKNOWN_COMMAND');
   }
   process.stdout.write(
     'Standalone smoke checks passed (help, offline queue, bounded credential probe, JSON errors).\n',

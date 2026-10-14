@@ -1,0 +1,3314 @@
+[
+  {
+    "label": "--help",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "help",
+      "result": {
+        "ok": true,
+        "data": {
+          "name": "gog-achievements",
+          "version": "<VERSION>",
+          "output": "Readable text by default; --json returns one JSON object; --json --pretty adds indentation. IDs are decimal strings.",
+          "commands": [
+            {
+              "command": "auth login",
+              "flags": ["no-open", "timeout"],
+              "description": "Sign in through a native GOG window and save login securely."
+            },
+            {
+              "command": "auth status",
+              "flags": [],
+              "description": "Check the saved login without revealing tokens."
+            },
+            {
+              "command": "auth logout",
+              "flags": [],
+              "description": "Remove this tool's saved login."
+            },
+            {
+              "command": "auth finish",
+              "flags": ["stdin", "clipboard"],
+              "description": "Finish manual sign-in from stdin or the clipboard."
+            },
+            {
+              "command": "auth import",
+              "flags": ["stdin"],
+              "description": "Import an existing refresh token through stdin."
+            },
+            {
+              "command": "games list",
+              "flags": ["search", "ids-only"],
+              "description": "List owned GOG games."
+            },
+            {
+              "command": "achievements list",
+              "flags": ["game"],
+              "required": ["game"],
+              "description": "List achievements and their unlock dates for an owned game."
+            },
+            {
+              "command": "queue create",
+              "flags": ["file", "game", "achievement", "unlocked-at"],
+              "required": ["file", "game"],
+              "description": "Create a local queue. Achievement flags can be repeated."
+            },
+            {
+              "command": "queue add",
+              "flags": ["file", "achievement", "unlocked-at"],
+              "required": ["file", "achievement"],
+              "description": "Add locked achievements to a local queue."
+            },
+            {
+              "command": "queue remove",
+              "flags": ["file", "achievement"],
+              "required": ["file", "achievement"],
+              "description": "Remove selected achievements from a local queue."
+            },
+            {
+              "command": "queue set-date",
+              "flags": ["file", "achievement", "unlocked-at"],
+              "required": ["file", "achievement", "unlocked-at"],
+              "description": "Change the date for selected queued achievements."
+            },
+            {
+              "command": "queue show",
+              "flags": ["file"],
+              "required": ["file"],
+              "description": "Read a local queue without network access."
+            },
+            {
+              "command": "queue apply",
+              "flags": ["file", "yes", "dry-run"],
+              "required": ["file"],
+              "description": "Preview a queue. Use --yes to apply it to GOG."
+            },
+            {
+              "command": "doctor",
+              "flags": [],
+              "description": "Check Node, platform support and saved login availability."
+            }
+          ],
+          "common_flags": ["--json", "--pretty", "--help (-h)"],
+          "exit_codes": {
+            "0": "success",
+            "2": "invalid input or queue file",
+            "3": "login required or rejected",
+            "4": "network or API response failure",
+            "5": "ownership, account, queue lock or game conflict",
+            "6": "apply incomplete",
+            "7": "native credential store or process failure"
+          },
+          "examples": [
+            "gog-achievements auth login",
+            "gog-achievements games list --search Cyberpunk",
+            "gog-achievements achievements list --game 1423049311"
+          ],
+          "options": [
+            {
+              "flag": "no-open",
+              "description": "Show the login URL for manual sign-in.",
+              "required": false
+            },
+            {
+              "flag": "timeout",
+              "value": "SECONDS",
+              "description": "Sign-in wait: 10 to 600 seconds. Default: 180.",
+              "required": false
+            },
+            {
+              "flag": "stdin",
+              "description": "Read the login value from a pipe. Required for auth import.",
+              "required": false
+            },
+            {
+              "flag": "clipboard",
+              "description": "Read the final GOG login URL from the clipboard.",
+              "required": false
+            },
+            {
+              "flag": "search",
+              "value": "TEXT",
+              "description": "Find games by title.",
+              "required": false
+            },
+            {
+              "flag": "ids-only",
+              "description": "Read game IDs without titles.",
+              "required": false
+            },
+            {
+              "flag": "game",
+              "value": "GAME_ID",
+              "description": "GOG game ID from games list.",
+              "required": false
+            },
+            {
+              "flag": "file",
+              "value": "PATH",
+              "description": "Local queue file.",
+              "required": false
+            },
+            {
+              "flag": "achievement",
+              "value": "ACHIEVEMENT_ID",
+              "multiple": true,
+              "description": "Select an achievement. Repeat for more than one.",
+              "required": false
+            },
+            {
+              "flag": "unlocked-at",
+              "value": "TIMESTAMP",
+              "description": "Unlock date in RFC 3339 with a time zone. Cannot be in the future.",
+              "required": false
+            },
+            {
+              "flag": "yes",
+              "description": "Apply queued achievements to GOG and check each result.",
+              "required": false
+            },
+            {
+              "flag": "dry-run",
+              "description": "Preview the queue. Makes no achievement writes. This is the default.",
+              "required": false
+            },
+            {
+              "flag": "json",
+              "description": "Return one compact JSON object for AI tools and scripts.",
+              "required": false
+            },
+            {
+              "flag": "pretty",
+              "description": "Keep readable text, or indent JSON when used with --json.",
+              "required": false
+            },
+            {
+              "flag": "help",
+              "short": "h",
+              "description": "Show help for this command. Also accepts -h.",
+              "required": false
+            }
+          ],
+          "usage": "gog-achievements <command> [options]"
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "result"],
+    "queue": null,
+    "text40": "gog-achievements <VERSION>\n\nRestore GOG achievements you already\nearned.\n\nUsage:\n  gog-achievements <command> [options]\n\nExamples:\n  gog-achievements auth login\n  gog-achievements games list --search Cyberpunk\n  gog-achievements achievements list --game 1423049311\n\nSign in:\n  auth login   Sign in through a native\n               GOG window and save login\n               securely.\n  auth status  Check the saved login\n               without revealing tokens.\n  auth logout  Remove this tool's saved\n               login.\n  auth finish  Finish manual sign-in\n               from stdin or the\n               clipboard.\n  auth import  Import an existing\n               refresh token through\n               stdin.\n\nBrowse:\n  games list  List owned GOG games.\n\nAchievements:\n  achievements list\n    List achievements and their unlock\n    dates for an owned game.\n\nLocal queues:\n  queue create    Create a local queue.\n                  Achievement flags can\n                  be repeated.\n  queue add       Add locked\n                  achievements to a\n                  local queue.\n  queue remove    Remove selected\n                  achievements from a\n                  local queue.\n  queue set-date  Change the date for\n                  selected queued\n                  achievements.\n  queue show      Read a local queue\n                  without network\n                  access.\n  queue apply     Preview a queue. Use\n                  --yes to apply it to\n                  GOG.\n\nChecks:\n  doctor  Check Node, platform support\n          and saved login availability.\n\nOutput and help:\n  (default)        Readable summaries\n                   and tables.\n  --json           Compact JSON for AI\n                   tools and scripts.\n  --json --pretty  Indented JSON for\n                   inspection.\n  --pretty         Readable text (same\n                   as the default).\n  -h, --help       Show help; add it\n                   after a command for\n                   its options.\n\nQueue edits are local. queue apply\npreviews by default; --yes applies\nchanges to GOG.\n\nMore: gog-achievements <command> --help\n| README.md\n",
+    "text100": "gog-achievements <VERSION>\n\nRestore GOG achievements you already earned.\n\nUsage:\n  gog-achievements <command> [options]\n\nExamples:\n  gog-achievements auth login\n  gog-achievements games list --search Cyberpunk\n  gog-achievements achievements list --game 1423049311\n\nSign in:\n  auth login   Sign in through a native GOG window and save login securely.\n  auth status  Check the saved login without revealing tokens.\n  auth logout  Remove this tool's saved login.\n  auth finish  Finish manual sign-in from stdin or the clipboard.\n  auth import  Import an existing refresh token through stdin.\n\nBrowse:\n  games list  List owned GOG games.\n\nAchievements:\n  achievements list  List achievements and their unlock dates for an owned game.\n\nLocal queues:\n  queue create    Create a local queue. Achievement flags can be repeated.\n  queue add       Add locked achievements to a local queue.\n  queue remove    Remove selected achievements from a local queue.\n  queue set-date  Change the date for selected queued achievements.\n  queue show      Read a local queue without network access.\n  queue apply     Preview a queue. Use --yes to apply it to GOG.\n\nChecks:\n  doctor  Check Node, platform support and saved login availability.\n\nOutput and help:\n  (default)        Readable summaries and tables.\n  --json           Compact JSON for AI tools and scripts.\n  --json --pretty  Indented JSON for inspection.\n  --pretty         Readable text (same as the default).\n  -h, --help       Show help; add it after a command for its options.\n\nQueue edits are local. queue apply previews by default; --yes applies changes to GOG.\n\nMore: gog-achievements <command> --help | README.md\n",
+    "json": "{\"ok\":true,\"data\":{\"name\":\"gog-achievements\",\"version\":\"<VERSION>\",\"output\":\"Readable text by default; --json returns one JSON object; --json --pretty adds indentation. IDs are decimal strings.\",\"commands\":[{\"command\":\"auth login\",\"flags\":[\"no-open\",\"timeout\"],\"description\":\"Sign in through a native GOG window and save login securely.\"},{\"command\":\"auth status\",\"flags\":[],\"description\":\"Check the saved login without revealing tokens.\"},{\"command\":\"auth logout\",\"flags\":[],\"description\":\"Remove this tool's saved login.\"},{\"command\":\"auth finish\",\"flags\":[\"stdin\",\"clipboard\"],\"description\":\"Finish manual sign-in from stdin or the clipboard.\"},{\"command\":\"auth import\",\"flags\":[\"stdin\"],\"description\":\"Import an existing refresh token through stdin.\"},{\"command\":\"games list\",\"flags\":[\"search\",\"ids-only\"],\"description\":\"List owned GOG games.\"},{\"command\":\"achievements list\",\"flags\":[\"game\"],\"required\":[\"game\"],\"description\":\"List achievements and their unlock dates for an owned game.\"},{\"command\":\"queue create\",\"flags\":[\"file\",\"game\",\"achievement\",\"unlocked-at\"],\"required\":[\"file\",\"game\"],\"description\":\"Create a local queue. Achievement flags can be repeated.\"},{\"command\":\"queue add\",\"flags\":[\"file\",\"achievement\",\"unlocked-at\"],\"required\":[\"file\",\"achievement\"],\"description\":\"Add locked achievements to a local queue.\"},{\"command\":\"queue remove\",\"flags\":[\"file\",\"achievement\"],\"required\":[\"file\",\"achievement\"],\"description\":\"Remove selected achievements from a local queue.\"},{\"command\":\"queue set-date\",\"flags\":[\"file\",\"achievement\",\"unlocked-at\"],\"required\":[\"file\",\"achievement\",\"unlocked-at\"],\"description\":\"Change the date for selected queued achievements.\"},{\"command\":\"queue show\",\"flags\":[\"file\"],\"required\":[\"file\"],\"description\":\"Read a local queue without network access.\"},{\"command\":\"queue apply\",\"flags\":[\"file\",\"yes\",\"dry-run\"],\"required\":[\"file\"],\"description\":\"Preview a queue. Use --yes to apply it to GOG.\"},{\"command\":\"doctor\",\"flags\":[],\"description\":\"Check Node, platform support and saved login availability.\"}],\"common_flags\":[\"--json\",\"--pretty\",\"--help (-h)\"],\"exit_codes\":{\"0\":\"success\",\"2\":\"invalid input or queue file\",\"3\":\"login required or rejected\",\"4\":\"network or API response failure\",\"5\":\"ownership, account, queue lock or game conflict\",\"6\":\"apply incomplete\",\"7\":\"native credential store or process failure\"},\"examples\":[\"gog-achievements auth login\",\"gog-achievements games list --search Cyberpunk\",\"gog-achievements achievements list --game 1423049311\"],\"options\":[{\"flag\":\"no-open\",\"description\":\"Show the login URL for manual sign-in.\",\"required\":false},{\"flag\":\"timeout\",\"value\":\"SECONDS\",\"description\":\"Sign-in wait: 10 to 600 seconds. Default: 180.\",\"required\":false},{\"flag\":\"stdin\",\"description\":\"Read the login value from a pipe. Required for auth import.\",\"required\":false},{\"flag\":\"clipboard\",\"description\":\"Read the final GOG login URL from the clipboard.\",\"required\":false},{\"flag\":\"search\",\"value\":\"TEXT\",\"description\":\"Find games by title.\",\"required\":false},{\"flag\":\"ids-only\",\"description\":\"Read game IDs without titles.\",\"required\":false},{\"flag\":\"game\",\"value\":\"GAME_ID\",\"description\":\"GOG game ID from games list.\",\"required\":false},{\"flag\":\"file\",\"value\":\"PATH\",\"description\":\"Local queue file.\",\"required\":false},{\"flag\":\"achievement\",\"value\":\"ACHIEVEMENT_ID\",\"multiple\":true,\"description\":\"Select an achievement. Repeat for more than one.\",\"required\":false},{\"flag\":\"unlocked-at\",\"value\":\"TIMESTAMP\",\"description\":\"Unlock date in RFC 3339 with a time zone. Cannot be in the future.\",\"required\":false},{\"flag\":\"yes\",\"description\":\"Apply queued achievements to GOG and check each result.\",\"required\":false},{\"flag\":\"dry-run\",\"description\":\"Preview the queue. Makes no achievement writes. This is the default.\",\"required\":false},{\"flag\":\"json\",\"description\":\"Return one compact JSON object for AI tools and scripts.\",\"required\":false},{\"flag\":\"pretty\",\"description\":\"Keep readable text, or indent JSON when used with --json.\",\"required\":false},{\"flag\":\"help\",\"short\":\"h\",\"description\":\"Show help for this command. Also accepts -h.\",\"required\":false}],\"usage\":\"gog-achievements <command> [options]\"}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"name\": \"gog-achievements\",\n    \"version\": \"<VERSION>\",\n    \"output\": \"Readable text by default; --json returns one JSON object; --json --pretty adds indentation. IDs are decimal strings.\",\n    \"commands\": [\n      {\n        \"command\": \"auth login\",\n        \"flags\": [\n          \"no-open\",\n          \"timeout\"\n        ],\n        \"description\": \"Sign in through a native GOG window and save login securely.\"\n      },\n      {\n        \"command\": \"auth status\",\n        \"flags\": [],\n        \"description\": \"Check the saved login without revealing tokens.\"\n      },\n      {\n        \"command\": \"auth logout\",\n        \"flags\": [],\n        \"description\": \"Remove this tool's saved login.\"\n      },\n      {\n        \"command\": \"auth finish\",\n        \"flags\": [\n          \"stdin\",\n          \"clipboard\"\n        ],\n        \"description\": \"Finish manual sign-in from stdin or the clipboard.\"\n      },\n      {\n        \"command\": \"auth import\",\n        \"flags\": [\n          \"stdin\"\n        ],\n        \"description\": \"Import an existing refresh token through stdin.\"\n      },\n      {\n        \"command\": \"games list\",\n        \"flags\": [\n          \"search\",\n          \"ids-only\"\n        ],\n        \"description\": \"List owned GOG games.\"\n      },\n      {\n        \"command\": \"achievements list\",\n        \"flags\": [\n          \"game\"\n        ],\n        \"required\": [\n          \"game\"\n        ],\n        \"description\": \"List achievements and their unlock dates for an owned game.\"\n      },\n      {\n        \"command\": \"queue create\",\n        \"flags\": [\n          \"file\",\n          \"game\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"required\": [\n          \"file\",\n          \"game\"\n        ],\n        \"description\": \"Create a local queue. Achievement flags can be repeated.\"\n      },\n      {\n        \"command\": \"queue add\",\n        \"flags\": [\n          \"file\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"required\": [\n          \"file\",\n          \"achievement\"\n        ],\n        \"description\": \"Add locked achievements to a local queue.\"\n      },\n      {\n        \"command\": \"queue remove\",\n        \"flags\": [\n          \"file\",\n          \"achievement\"\n        ],\n        \"required\": [\n          \"file\",\n          \"achievement\"\n        ],\n        \"description\": \"Remove selected achievements from a local queue.\"\n      },\n      {\n        \"command\": \"queue set-date\",\n        \"flags\": [\n          \"file\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"required\": [\n          \"file\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"description\": \"Change the date for selected queued achievements.\"\n      },\n      {\n        \"command\": \"queue show\",\n        \"flags\": [\n          \"file\"\n        ],\n        \"required\": [\n          \"file\"\n        ],\n        \"description\": \"Read a local queue without network access.\"\n      },\n      {\n        \"command\": \"queue apply\",\n        \"flags\": [\n          \"file\",\n          \"yes\",\n          \"dry-run\"\n        ],\n        \"required\": [\n          \"file\"\n        ],\n        \"description\": \"Preview a queue. Use --yes to apply it to GOG.\"\n      },\n      {\n        \"command\": \"doctor\",\n        \"flags\": [],\n        \"description\": \"Check Node, platform support and saved login availability.\"\n      }\n    ],\n    \"common_flags\": [\n      \"--json\",\n      \"--pretty\",\n      \"--help (-h)\"\n    ],\n    \"exit_codes\": {\n      \"0\": \"success\",\n      \"2\": \"invalid input or queue file\",\n      \"3\": \"login required or rejected\",\n      \"4\": \"network or API response failure\",\n      \"5\": \"ownership, account, queue lock or game conflict\",\n      \"6\": \"apply incomplete\",\n      \"7\": \"native credential store or process failure\"\n    },\n    \"examples\": [\n      \"gog-achievements auth login\",\n      \"gog-achievements games list --search Cyberpunk\",\n      \"gog-achievements achievements list --game 1423049311\"\n    ],\n    \"options\": [\n      {\n        \"flag\": \"no-open\",\n        \"description\": \"Show the login URL for manual sign-in.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"timeout\",\n        \"value\": \"SECONDS\",\n        \"description\": \"Sign-in wait: 10 to 600 seconds. Default: 180.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"stdin\",\n        \"description\": \"Read the login value from a pipe. Required for auth import.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"clipboard\",\n        \"description\": \"Read the final GOG login URL from the clipboard.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"search\",\n        \"value\": \"TEXT\",\n        \"description\": \"Find games by title.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"ids-only\",\n        \"description\": \"Read game IDs without titles.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"game\",\n        \"value\": \"GAME_ID\",\n        \"description\": \"GOG game ID from games list.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"file\",\n        \"value\": \"PATH\",\n        \"description\": \"Local queue file.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"achievement\",\n        \"value\": \"ACHIEVEMENT_ID\",\n        \"multiple\": true,\n        \"description\": \"Select an achievement. Repeat for more than one.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"unlocked-at\",\n        \"value\": \"TIMESTAMP\",\n        \"description\": \"Unlock date in RFC 3339 with a time zone. Cannot be in the future.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"yes\",\n        \"description\": \"Apply queued achievements to GOG and check each result.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"dry-run\",\n        \"description\": \"Preview the queue. Makes no achievement writes. This is the default.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"json\",\n        \"description\": \"Return one compact JSON object for AI tools and scripts.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"pretty\",\n        \"description\": \"Keep readable text, or indent JSON when used with --json.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"help\",\n        \"short\": \"h\",\n        \"description\": \"Show help for this command. Also accepts -h.\",\n        \"required\": false\n      }\n    ],\n    \"usage\": \"gog-achievements <command> [options]\"\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "queue --help",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "help",
+      "result": {
+        "ok": true,
+        "data": {
+          "name": "gog-achievements",
+          "version": "<VERSION>",
+          "output": "Readable text by default; --json returns one JSON object; --json --pretty adds indentation. IDs are decimal strings.",
+          "commands": [
+            {
+              "command": "queue create",
+              "flags": ["file", "game", "achievement", "unlocked-at"],
+              "required": ["file", "game"],
+              "description": "Create a local queue. Achievement flags can be repeated."
+            },
+            {
+              "command": "queue add",
+              "flags": ["file", "achievement", "unlocked-at"],
+              "required": ["file", "achievement"],
+              "description": "Add locked achievements to a local queue."
+            },
+            {
+              "command": "queue remove",
+              "flags": ["file", "achievement"],
+              "required": ["file", "achievement"],
+              "description": "Remove selected achievements from a local queue."
+            },
+            {
+              "command": "queue set-date",
+              "flags": ["file", "achievement", "unlocked-at"],
+              "required": ["file", "achievement", "unlocked-at"],
+              "description": "Change the date for selected queued achievements."
+            },
+            {
+              "command": "queue show",
+              "flags": ["file"],
+              "required": ["file"],
+              "description": "Read a local queue without network access."
+            },
+            {
+              "command": "queue apply",
+              "flags": ["file", "yes", "dry-run"],
+              "required": ["file"],
+              "description": "Preview a queue. Use --yes to apply it to GOG."
+            }
+          ],
+          "common_flags": ["--json", "--pretty", "--help (-h)"],
+          "exit_codes": {
+            "0": "success",
+            "2": "invalid input or queue file",
+            "3": "login required or rejected",
+            "4": "network or API response failure",
+            "5": "ownership, account, queue lock or game conflict",
+            "6": "apply incomplete",
+            "7": "native credential store or process failure"
+          },
+          "examples": [
+            "gog-achievements queue create --game GAME_ID --file queue.json",
+            "gog-achievements queue add --file queue.json --achievement ACHIEVEMENT_ID",
+            "gog-achievements queue remove --file queue.json --achievement ACHIEVEMENT_ID"
+          ],
+          "topic": "queue",
+          "options": [
+            {
+              "flag": "file",
+              "value": "PATH",
+              "description": "Local queue file.",
+              "required": false
+            },
+            {
+              "flag": "game",
+              "value": "GAME_ID",
+              "description": "GOG game ID from games list.",
+              "required": false
+            },
+            {
+              "flag": "achievement",
+              "value": "ACHIEVEMENT_ID",
+              "multiple": true,
+              "description": "Select an achievement. Repeat for more than one.",
+              "required": false
+            },
+            {
+              "flag": "unlocked-at",
+              "value": "TIMESTAMP",
+              "description": "Unlock date in RFC 3339 with a time zone. Cannot be in the future.",
+              "required": false
+            },
+            {
+              "flag": "yes",
+              "description": "Apply queued achievements to GOG and check each result.",
+              "required": false
+            },
+            {
+              "flag": "dry-run",
+              "description": "Preview the queue. Makes no achievement writes. This is the default.",
+              "required": false
+            },
+            {
+              "flag": "json",
+              "description": "Return one compact JSON object for AI tools and scripts.",
+              "required": false
+            },
+            {
+              "flag": "pretty",
+              "description": "Keep readable text, or indent JSON when used with --json.",
+              "required": false
+            },
+            {
+              "flag": "help",
+              "short": "h",
+              "description": "Show help for this command. Also accepts -h.",
+              "required": false
+            }
+          ],
+          "usage": "gog-achievements queue <command> [options]"
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "result"],
+    "queue": null,
+    "text40": "gog-achievements <VERSION> - queue\n\nRestore GOG achievements you already\nearned.\n\nUsage:\n  gog-achievements queue <command>\n  [options]\n\nExamples:\n  gog-achievements queue create --game GAME_ID --file queue.json\n  gog-achievements queue add --file queue.json --achievement ACHIEVEMENT_ID\n  gog-achievements queue remove --file queue.json --achievement ACHIEVEMENT_ID\n\nLocal queues:\n  queue create    Create a local queue.\n                  Achievement flags can\n                  be repeated.\n  queue add       Add locked\n                  achievements to a\n                  local queue.\n  queue remove    Remove selected\n                  achievements from a\n                  local queue.\n  queue set-date  Change the date for\n                  selected queued\n                  achievements.\n  queue show      Read a local queue\n                  without network\n                  access.\n  queue apply     Preview a queue. Use\n                  --yes to apply it to\n                  GOG.\n\nOptions:\n  --file PATH\n    Local queue file.\n  --game GAME_ID\n    GOG game ID from games list.\n  --achievement ACHIEVEMENT_ID\n    Select an achievement. Repeat for\n    more than one.\n  --unlocked-at TIMESTAMP\n    Unlock date in RFC 3339 with a time\n    zone. Cannot be in the future.\n  --yes\n    Apply queued achievements to GOG and\n    check each result.\n  --dry-run\n    Preview the queue. Makes no\n    achievement writes. This is the\n    default.\n\nOutput and help:\n  (default)        Readable summaries\n                   and tables.\n  --json           Compact JSON for AI\n                   tools and scripts.\n  --json --pretty  Indented JSON for\n                   inspection.\n  --pretty         Readable text (same\n                   as the default).\n  -h, --help       Show help; add it\n                   after a command for\n                   its options.\n\nQueue edits are local. queue apply\npreviews by default; --yes applies\nchanges to GOG.\n\nMore: gog-achievements <command> --help\n| README.md\n",
+    "text100": "gog-achievements <VERSION> - queue\n\nRestore GOG achievements you already earned.\n\nUsage:\n  gog-achievements queue <command> [options]\n\nExamples:\n  gog-achievements queue create --game GAME_ID --file queue.json\n  gog-achievements queue add --file queue.json --achievement ACHIEVEMENT_ID\n  gog-achievements queue remove --file queue.json --achievement ACHIEVEMENT_ID\n\nLocal queues:\n  queue create    Create a local queue. Achievement flags can be repeated.\n  queue add       Add locked achievements to a local queue.\n  queue remove    Remove selected achievements from a local queue.\n  queue set-date  Change the date for selected queued achievements.\n  queue show      Read a local queue without network access.\n  queue apply     Preview a queue. Use --yes to apply it to GOG.\n\nOptions:\n  --file PATH                   Local queue file.\n  --game GAME_ID                GOG game ID from games list.\n  --achievement ACHIEVEMENT_ID  Select an achievement. Repeat for more than one.\n  --unlocked-at TIMESTAMP       Unlock date in RFC 3339 with a time zone. Cannot be in the future.\n  --yes                         Apply queued achievements to GOG and check each result.\n  --dry-run                     Preview the queue. Makes no achievement writes. This is the default.\n\nOutput and help:\n  (default)        Readable summaries and tables.\n  --json           Compact JSON for AI tools and scripts.\n  --json --pretty  Indented JSON for inspection.\n  --pretty         Readable text (same as the default).\n  -h, --help       Show help; add it after a command for its options.\n\nQueue edits are local. queue apply previews by default; --yes applies changes to GOG.\n\nMore: gog-achievements <command> --help | README.md\n",
+    "json": "{\"ok\":true,\"data\":{\"name\":\"gog-achievements\",\"version\":\"<VERSION>\",\"output\":\"Readable text by default; --json returns one JSON object; --json --pretty adds indentation. IDs are decimal strings.\",\"commands\":[{\"command\":\"queue create\",\"flags\":[\"file\",\"game\",\"achievement\",\"unlocked-at\"],\"required\":[\"file\",\"game\"],\"description\":\"Create a local queue. Achievement flags can be repeated.\"},{\"command\":\"queue add\",\"flags\":[\"file\",\"achievement\",\"unlocked-at\"],\"required\":[\"file\",\"achievement\"],\"description\":\"Add locked achievements to a local queue.\"},{\"command\":\"queue remove\",\"flags\":[\"file\",\"achievement\"],\"required\":[\"file\",\"achievement\"],\"description\":\"Remove selected achievements from a local queue.\"},{\"command\":\"queue set-date\",\"flags\":[\"file\",\"achievement\",\"unlocked-at\"],\"required\":[\"file\",\"achievement\",\"unlocked-at\"],\"description\":\"Change the date for selected queued achievements.\"},{\"command\":\"queue show\",\"flags\":[\"file\"],\"required\":[\"file\"],\"description\":\"Read a local queue without network access.\"},{\"command\":\"queue apply\",\"flags\":[\"file\",\"yes\",\"dry-run\"],\"required\":[\"file\"],\"description\":\"Preview a queue. Use --yes to apply it to GOG.\"}],\"common_flags\":[\"--json\",\"--pretty\",\"--help (-h)\"],\"exit_codes\":{\"0\":\"success\",\"2\":\"invalid input or queue file\",\"3\":\"login required or rejected\",\"4\":\"network or API response failure\",\"5\":\"ownership, account, queue lock or game conflict\",\"6\":\"apply incomplete\",\"7\":\"native credential store or process failure\"},\"examples\":[\"gog-achievements queue create --game GAME_ID --file queue.json\",\"gog-achievements queue add --file queue.json --achievement ACHIEVEMENT_ID\",\"gog-achievements queue remove --file queue.json --achievement ACHIEVEMENT_ID\"],\"topic\":\"queue\",\"options\":[{\"flag\":\"file\",\"value\":\"PATH\",\"description\":\"Local queue file.\",\"required\":false},{\"flag\":\"game\",\"value\":\"GAME_ID\",\"description\":\"GOG game ID from games list.\",\"required\":false},{\"flag\":\"achievement\",\"value\":\"ACHIEVEMENT_ID\",\"multiple\":true,\"description\":\"Select an achievement. Repeat for more than one.\",\"required\":false},{\"flag\":\"unlocked-at\",\"value\":\"TIMESTAMP\",\"description\":\"Unlock date in RFC 3339 with a time zone. Cannot be in the future.\",\"required\":false},{\"flag\":\"yes\",\"description\":\"Apply queued achievements to GOG and check each result.\",\"required\":false},{\"flag\":\"dry-run\",\"description\":\"Preview the queue. Makes no achievement writes. This is the default.\",\"required\":false},{\"flag\":\"json\",\"description\":\"Return one compact JSON object for AI tools and scripts.\",\"required\":false},{\"flag\":\"pretty\",\"description\":\"Keep readable text, or indent JSON when used with --json.\",\"required\":false},{\"flag\":\"help\",\"short\":\"h\",\"description\":\"Show help for this command. Also accepts -h.\",\"required\":false}],\"usage\":\"gog-achievements queue <command> [options]\"}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"name\": \"gog-achievements\",\n    \"version\": \"<VERSION>\",\n    \"output\": \"Readable text by default; --json returns one JSON object; --json --pretty adds indentation. IDs are decimal strings.\",\n    \"commands\": [\n      {\n        \"command\": \"queue create\",\n        \"flags\": [\n          \"file\",\n          \"game\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"required\": [\n          \"file\",\n          \"game\"\n        ],\n        \"description\": \"Create a local queue. Achievement flags can be repeated.\"\n      },\n      {\n        \"command\": \"queue add\",\n        \"flags\": [\n          \"file\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"required\": [\n          \"file\",\n          \"achievement\"\n        ],\n        \"description\": \"Add locked achievements to a local queue.\"\n      },\n      {\n        \"command\": \"queue remove\",\n        \"flags\": [\n          \"file\",\n          \"achievement\"\n        ],\n        \"required\": [\n          \"file\",\n          \"achievement\"\n        ],\n        \"description\": \"Remove selected achievements from a local queue.\"\n      },\n      {\n        \"command\": \"queue set-date\",\n        \"flags\": [\n          \"file\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"required\": [\n          \"file\",\n          \"achievement\",\n          \"unlocked-at\"\n        ],\n        \"description\": \"Change the date for selected queued achievements.\"\n      },\n      {\n        \"command\": \"queue show\",\n        \"flags\": [\n          \"file\"\n        ],\n        \"required\": [\n          \"file\"\n        ],\n        \"description\": \"Read a local queue without network access.\"\n      },\n      {\n        \"command\": \"queue apply\",\n        \"flags\": [\n          \"file\",\n          \"yes\",\n          \"dry-run\"\n        ],\n        \"required\": [\n          \"file\"\n        ],\n        \"description\": \"Preview a queue. Use --yes to apply it to GOG.\"\n      }\n    ],\n    \"common_flags\": [\n      \"--json\",\n      \"--pretty\",\n      \"--help (-h)\"\n    ],\n    \"exit_codes\": {\n      \"0\": \"success\",\n      \"2\": \"invalid input or queue file\",\n      \"3\": \"login required or rejected\",\n      \"4\": \"network or API response failure\",\n      \"5\": \"ownership, account, queue lock or game conflict\",\n      \"6\": \"apply incomplete\",\n      \"7\": \"native credential store or process failure\"\n    },\n    \"examples\": [\n      \"gog-achievements queue create --game GAME_ID --file queue.json\",\n      \"gog-achievements queue add --file queue.json --achievement ACHIEVEMENT_ID\",\n      \"gog-achievements queue remove --file queue.json --achievement ACHIEVEMENT_ID\"\n    ],\n    \"topic\": \"queue\",\n    \"options\": [\n      {\n        \"flag\": \"file\",\n        \"value\": \"PATH\",\n        \"description\": \"Local queue file.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"game\",\n        \"value\": \"GAME_ID\",\n        \"description\": \"GOG game ID from games list.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"achievement\",\n        \"value\": \"ACHIEVEMENT_ID\",\n        \"multiple\": true,\n        \"description\": \"Select an achievement. Repeat for more than one.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"unlocked-at\",\n        \"value\": \"TIMESTAMP\",\n        \"description\": \"Unlock date in RFC 3339 with a time zone. Cannot be in the future.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"yes\",\n        \"description\": \"Apply queued achievements to GOG and check each result.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"dry-run\",\n        \"description\": \"Preview the queue. Makes no achievement writes. This is the default.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"json\",\n        \"description\": \"Return one compact JSON object for AI tools and scripts.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"pretty\",\n        \"description\": \"Keep readable text, or indent JSON when used with --json.\",\n        \"required\": false\n      },\n      {\n        \"flag\": \"help\",\n        \"short\": \"h\",\n        \"description\": \"Show help for this command. Also accepts -h.\",\n        \"required\": false\n      }\n    ],\n    \"usage\": \"gog-achievements queue <command> [options]\"\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "auth login",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "auth login",
+      "result": {
+        "ok": true,
+        "data": {
+          "authenticated": true,
+          "user_id": "48628349957132247",
+          "storage": "macos_keychain"
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "text100": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "json": "{\"ok\":true,\"data\":{\"authenticated\":true,\"user_id\":\"48628349957132247\",\"storage\":\"macos_keychain\"}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"authenticated\": true,\n    \"user_id\": \"48628349957132247\",\n    \"storage\": \"macos_keychain\"\n  }\n}\n",
+    "requests": [
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "46899977096215655"],
+          ["grant_type", "authorization_code"],
+          ["redirect_uri", "https://embed.gog.com/on_login_success?origin=client"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "auth login --no-open",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "auth login",
+      "result": {
+        "ok": true,
+        "data": {
+          "authenticated": false,
+          "action_required": "complete_manual_browser_login",
+          "browser_opened": false,
+          "login_url": "https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2",
+          "next_command": "node bin/gog-achievements.mjs auth finish --clipboard",
+          "instructions": "Open the URL, complete GOG sign-in, copy the final redirected URL, then run the next command locally."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Open the URL, complete GOG sign-in, copy\nthe final redirected URL, then run the\nnext command locally.\n\nLogin URL:\nhttps://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2\n\nNext: node bin/gog-achievements.mjs auth finish --clipboard\n",
+    "text100": "Open the URL, complete GOG sign-in, copy the final redirected URL, then run the next command\nlocally.\n\nLogin URL:\nhttps://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2\n\nNext: node bin/gog-achievements.mjs auth finish --clipboard\n",
+    "json": "{\"ok\":true,\"data\":{\"authenticated\":false,\"action_required\":\"complete_manual_browser_login\",\"browser_opened\":false,\"login_url\":\"https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2\",\"next_command\":\"node bin/gog-achievements.mjs auth finish --clipboard\",\"instructions\":\"Open the URL, complete GOG sign-in, copy the final redirected URL, then run the next command locally.\"}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"authenticated\": false,\n    \"action_required\": \"complete_manual_browser_login\",\n    \"browser_opened\": false,\n    \"login_url\": \"https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2\",\n    \"next_command\": \"node bin/gog-achievements.mjs auth finish --clipboard\",\n    \"instructions\": \"Open the URL, complete GOG sign-in, copy the final redirected URL, then run the next command locally.\"\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "auth status",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "auth status",
+      "result": {
+        "ok": true,
+        "data": {
+          "authenticated": true,
+          "user_id": "48628349957132247",
+          "expired": false,
+          "storage": "macos_keychain"
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "text100": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "json": "{\"ok\":true,\"data\":{\"authenticated\":true,\"user_id\":\"48628349957132247\",\"expired\":false,\"storage\":\"macos_keychain\"}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"authenticated\": true,\n    \"user_id\": \"48628349957132247\",\n    \"expired\": false,\n    \"storage\": \"macos_keychain\"\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "auth finish --stdin",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "auth finish",
+      "result": {
+        "ok": true,
+        "data": {
+          "authenticated": true,
+          "user_id": "48628349957132247",
+          "storage": "macos_keychain"
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "text100": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "json": "{\"ok\":true,\"data\":{\"authenticated\":true,\"user_id\":\"48628349957132247\",\"storage\":\"macos_keychain\"}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"authenticated\": true,\n    \"user_id\": \"48628349957132247\",\n    \"storage\": \"macos_keychain\"\n  }\n}\n",
+    "requests": [
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "46899977096215655"],
+          ["grant_type", "authorization_code"],
+          ["redirect_uri", "https://embed.gog.com/on_login_success?origin=client"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "auth import --stdin",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "auth import",
+      "result": {
+        "ok": true,
+        "data": {
+          "authenticated": true,
+          "user_id": "48628349957132247",
+          "storage": "macos_keychain"
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "text100": "Signed in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "json": "{\"ok\":true,\"data\":{\"authenticated\":true,\"user_id\":\"48628349957132247\",\"storage\":\"macos_keychain\"}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"authenticated\": true,\n    \"user_id\": \"48628349957132247\",\n    \"storage\": \"macos_keychain\"\n  }\n}\n",
+    "requests": [
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "46899977096215655"],
+          ["grant_type", "refresh_token"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "auth logout",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "auth logout",
+      "result": {
+        "ok": true,
+        "data": {
+          "authenticated": false,
+          "local_login_removed": true
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Saved login removed from this tool.\n",
+    "text100": "Saved login removed from this tool.\n",
+    "json": "{\"ok\":true,\"data\":{\"authenticated\":false,\"local_login_removed\":true}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"authenticated\": false,\n    \"local_login_removed\": true\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "games list",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "games list",
+      "result": {
+        "ok": true,
+        "data": {
+          "user_id": "48628349957132247",
+          "count": 1,
+          "games": [
+            {
+              "id": "1423049311",
+              "title": "Cyberpunk 2077",
+              "slug": "test-game",
+              "image": null,
+              "works_on": {
+                "Mac": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "1 owned game\n\nGame ID     Title\n----------  --------------\n1423049311  Cyberpunk 2077\n",
+    "text100": "1 owned game\n\nGame ID     Title\n----------  --------------\n1423049311  Cyberpunk 2077\n",
+    "json": "{\"ok\":true,\"data\":{\"user_id\":\"48628349957132247\",\"count\":1,\"games\":[{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"slug\":\"test-game\",\"image\":null,\"works_on\":{\"Mac\":true}}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"user_id\": \"48628349957132247\",\n    \"count\": 1,\n    \"games\": [\n      {\n        \"id\": \"1423049311\",\n        \"title\": \"Cyberpunk 2077\",\n        \"slug\": \"test-game\",\n        \"image\": null,\n        \"works_on\": {\n          \"Mac\": true\n        }\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/account/getFilteredProducts",
+        "query": [
+          ["mediaType", "1"],
+          ["sortBy", "title"],
+          ["page", "1"]
+        ],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "games list --ids-only",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "games list",
+      "result": {
+        "ok": true,
+        "data": {
+          "user_id": "48628349957132247",
+          "count": 1,
+          "games": [
+            {
+              "id": "1423049311"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "1 owned game IDs\n\n1423049311\n",
+    "text100": "1 owned game IDs\n\n1423049311\n",
+    "json": "{\"ok\":true,\"data\":{\"user_id\":\"48628349957132247\",\"count\":1,\"games\":[{\"id\":\"1423049311\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"user_id\": \"48628349957132247\",\n    \"count\": 1,\n    \"games\": [\n      {\n        \"id\": \"1423049311\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "achievements list --game 1423049311",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "achievements list",
+      "result": {
+        "ok": true,
+        "data": {
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "count": 2,
+          "achievements": [
+            {
+              "id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "description": "First description",
+              "unlocked": false,
+              "unlocked_at": null,
+              "hidden": false,
+              "image_locked": null,
+              "image_unlocked": null,
+              "rarity": null
+            },
+            {
+              "id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "description": "Second description",
+              "unlocked": false,
+              "unlocked_at": null,
+              "hidden": false,
+              "image_locked": null,
+              "image_unlocked": null,
+              "rarity": null
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Cyberpunk 2077\nGame ID: 1423049311\n2 achievements: 0 unlocked, 2 locked\n\nStatus: Locked\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlocked at (UTC): -\n\nStatus: Locked\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlocked at (UTC): -\n\nUse --json for descriptions and all fields.\n",
+    "text100": "Cyberpunk 2077\nGame ID: 1423049311\n2 achievements: 0 unlocked, 2 locked\n\nStatus  Achievement ID     Achievement         Unlocked at (UTC)\n------  -----------------  ------------------  -----------------\nLocked  48497841707623054  Earned but missing  -\nLocked  48225958150521213  Second achievement  -\n\nUse --json for descriptions and all fields.\n",
+    "json": "{\"ok\":true,\"data\":{\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"count\":2,\"achievements\":[{\"id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"description\":\"First description\",\"unlocked\":false,\"unlocked_at\":null,\"hidden\":false,\"image_locked\":null,\"image_unlocked\":null,\"rarity\":null},{\"id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"description\":\"Second description\",\"unlocked\":false,\"unlocked_at\":null,\"hidden\":false,\"image_locked\":null,\"image_unlocked\":null,\"rarity\":null}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"count\": 2,\n    \"achievements\": [\n      {\n        \"id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"description\": \"First description\",\n        \"unlocked\": false,\n        \"unlocked_at\": null,\n        \"hidden\": false,\n        \"image_locked\": null,\n        \"image_unlocked\": null,\n        \"rarity\": null\n      },\n      {\n        \"id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"description\": \"Second description\",\n        \"unlocked\": false,\n        \"unlocked_at\": null,\n        \"hidden\": false,\n        \"image_locked\": null,\n        \"image_unlocked\": null,\n        \"rarity\": null\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "doctor",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "doctor",
+      "result": {
+        "ok": true,
+        "data": {
+          "supported": true,
+          "platform": "darwin",
+          "architecture": "<ARCH>",
+          "node": "<NODE>",
+          "credentials_available": true,
+          "keychain_available": true,
+          "login": {
+            "authenticated": true,
+            "user_id": "48628349957132247",
+            "expired": false,
+            "storage": "macos_keychain"
+          }
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Supported platform: darwin (<ARCH>)\nNode: <NODE>\nCredential store: available\nSigned in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "text100": "Supported platform: darwin (<ARCH>)\nNode: <NODE>\nCredential store: available\nSigned in to GOG.\nAccount: 48628349957132247\nStorage: Mac Keychain\n",
+    "json": "{\"ok\":true,\"data\":{\"supported\":true,\"platform\":\"darwin\",\"architecture\":\"<ARCH>\",\"node\":\"<NODE>\",\"credentials_available\":true,\"keychain_available\":true,\"login\":{\"authenticated\":true,\"user_id\":\"48628349957132247\",\"expired\":false,\"storage\":\"macos_keychain\"}}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"supported\": true,\n    \"platform\": \"darwin\",\n    \"architecture\": \"<ARCH>\",\n    \"node\": \"<NODE>\",\n    \"credentials_available\": true,\n    \"keychain_available\": true,\n    \"login\": {\n      \"authenticated\": true,\n      \"user_id\": \"48628349957132247\",\n      \"expired\": false,\n      \"storage\": \"macos_keychain\"\n    }\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "unknown-command --json",
+    "outcome": {
+      "exitCode": 2,
+      "pretty": false,
+      "format": "json",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "UNKNOWN_COMMAND",
+          "message": "Unknown command. Run --help for the command list."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Error [UNKNOWN_COMMAND]: Unknown\ncommand. Run --help for the command\nlist.\n",
+    "text100": "Error [UNKNOWN_COMMAND]: Unknown command. Run --help for the command list.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"UNKNOWN_COMMAND\",\"message\":\"Unknown command. Run --help for the command list.\"}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"UNKNOWN_COMMAND\",\n    \"message\": \"Unknown command. Run --help for the command list.\"\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "auth status --yes",
+    "outcome": {
+      "exitCode": 2,
+      "pretty": false,
+      "format": "text",
+      "command": "auth status",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "INVALID_ARGUMENTS",
+          "message": "One or more flags are not valid for this command."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Error [INVALID_ARGUMENTS]: One or more\nflags are not valid for this command.\n",
+    "text100": "Error [INVALID_ARGUMENTS]: One or more flags are not valid for this command.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"INVALID_ARGUMENTS\",\"message\":\"One or more flags are not valid for this command.\"}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"INVALID_ARGUMENTS\",\n    \"message\": \"One or more flags are not valid for this command.\"\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "queue apply --yes",
+    "outcome": {
+      "exitCode": 2,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "MISSING_ARGUMENT",
+          "message": "A required flag is missing. Run --help for the command list."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Error [MISSING_ARGUMENT]: A required\nflag is missing. Run --help for the\ncommand list.\n",
+    "text100": "Error [MISSING_ARGUMENT]: A required flag is missing. Run --help for the command list.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"MISSING_ARGUMENT\",\"message\":\"A required flag is missing. Run --help for the command list.\"}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"MISSING_ARGUMENT\",\n    \"message\": \"A required flag is missing. Run --help for the command list.\"\n  }\n}\n",
+    "requests": [],
+    "writes": []
+  },
+  {
+    "label": "queue create",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue create",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": []
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": []\n}\n",
+    "text40": "Queue created: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n0 queued achievements\n\nThe queue is empty.\n\nQueue edits only change the local file.\n",
+    "text100": "Queue created: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n0 queued achievements\n\nThe queue is empty.\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": []\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "queue add",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue add",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue updated: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-01-01 12:34:56\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue updated: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-01-01 12:34:56\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "queue set-date",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue set-date",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-02-01T12:00:00Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue dates updated: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-02-01 12:00:00\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue dates updated: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-02-01 12:00:00\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-02-01T12:00:00Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "queue show",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue show",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-02-01T12:00:00Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-02-01 12:00:00\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-02-01 12:00:00\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-02-01T12:00:00Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "queue remove",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue remove",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-02-01T12:00:00Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue updated: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n1 queued achievement\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-02-01 12:00:00\n\nQueue edits only change the local file.\n",
+    "text100": "Queue updated: Cyberpunk 2077\nFile: <TEMP>/queue.json\nGame ID: 1423049311\n1 queued achievement\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-02-01 12:00:00\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-02-01T12:00:00Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "queue apply",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "dry_run": true,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "complete": true,
+          "results": [
+            {
+              "achievement_id": "48497841707623054",
+              "name": "Earned but missing",
+              "requested_unlocked_at": "2026-02-01T12:00:00Z",
+              "previous_unlocked_at": null,
+              "actual_unlocked_at": null,
+              "status": "pending"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue preview: Cyberpunk 2077\nGame ID: 1423049311\nPreview only. No achievements were changed.\n\nWould unlock: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-02-01 12:00:00\n  Actual (UTC):    -\n",
+    "text100": "Queue preview: Cyberpunk 2077\nGame ID: 1423049311\nPreview only. No achievements were changed.\n\nWould unlock: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-02-01 12:00:00\n  Actual (UTC):    -\n",
+    "json": "{\"ok\":true,\"data\":{\"dry_run\":true,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":true,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-02-01T12:00:00Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"pending\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"dry_run\": true,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"complete\": true,\n    \"results\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"name\": \"Earned but missing\",\n        \"requested_unlocked_at\": \"2026-02-01T12:00:00Z\",\n        \"previous_unlocked_at\": null,\n        \"actual_unlocked_at\": null,\n        \"status\": \"pending\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "queue apply",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "dry_run": false,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "complete": true,
+          "results": [
+            {
+              "achievement_id": "48497841707623054",
+              "name": "Earned but missing",
+              "requested_unlocked_at": "2026-02-01T12:00:00Z",
+              "previous_unlocked_at": null,
+              "actual_unlocked_at": "2026-02-01T12:00:00+0000",
+              "status": "restored"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n    }\n  ]\n}\n",
+    "text40": "Apply complete: Cyberpunk 2077\nGame ID: 1423049311\n\nRestored: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-02-01 12:00:00\n  Actual (UTC):    2026-02-01 12:00:00\n",
+    "text100": "Apply complete: Cyberpunk 2077\nGame ID: 1423049311\n\nRestored: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-02-01 12:00:00\n  Actual (UTC):    2026-02-01 12:00:00\n",
+    "json": "{\"ok\":true,\"data\":{\"dry_run\":false,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":true,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-02-01T12:00:00Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":\"2026-02-01T12:00:00+0000\",\"status\":\"restored\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"dry_run\": false,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"complete\": true,\n    \"results\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"name\": \"Earned but missing\",\n        \"requested_unlocked_at\": \"2026-02-01T12:00:00Z\",\n        \"previous_unlocked_at\": null,\n        \"actual_unlocked_at\": \"2026-02-01T12:00:00+0000\",\n        \"status\": \"restored\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "14370605671234567"],
+          ["grant_type", "refresh_token"],
+          ["without_new_session", "1"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements/48497841707623054",
+        "query": [],
+        "method": "POST",
+        "scope": "game",
+        "body": "{\"date_unlocked\":\"2026-02-01T12:00:00+0000\"}"
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      }
+    ],
+    "writes": [
+      {
+        "achievement_id": "48497841707623054",
+        "body": {
+          "date_unlocked": "2026-02-01T12:00:00+0000"
+        }
+      }
+    ]
+  },
+  {
+    "label": "queue apply",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/queue.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "dry_run": false,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "complete": true,
+          "results": [
+            {
+              "achievement_id": "48497841707623054",
+              "name": "Earned but missing",
+              "requested_unlocked_at": "2026-02-01T12:00:00Z",
+              "previous_unlocked_at": "2026-02-01T12:00:00+0000",
+              "actual_unlocked_at": "2026-02-01T12:00:00+0000",
+              "status": "skipped_already_unlocked"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-02-01T12:00:00Z\"\n    }\n  ]\n}\n",
+    "text40": "Apply complete: Cyberpunk 2077\nGame ID: 1423049311\n\nAlready unlocked; skipped: Earned but\nmissing\n  ID: 48497841707623054\n  Requested (UTC): 2026-02-01 12:00:00\n  Actual (UTC):    2026-02-01 12:00:00\n",
+    "text100": "Apply complete: Cyberpunk 2077\nGame ID: 1423049311\n\nAlready unlocked; skipped: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-02-01 12:00:00\n  Actual (UTC):    2026-02-01 12:00:00\n",
+    "json": "{\"ok\":true,\"data\":{\"dry_run\":false,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":true,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-02-01T12:00:00Z\",\"previous_unlocked_at\":\"2026-02-01T12:00:00+0000\",\"actual_unlocked_at\":\"2026-02-01T12:00:00+0000\",\"status\":\"skipped_already_unlocked\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"dry_run\": false,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"complete\": true,\n    \"results\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"name\": \"Earned but missing\",\n        \"requested_unlocked_at\": \"2026-02-01T12:00:00Z\",\n        \"previous_unlocked_at\": \"2026-02-01T12:00:00+0000\",\n        \"actual_unlocked_at\": \"2026-02-01T12:00:00+0000\",\n        \"status\": \"skipped_already_unlocked\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "14370605671234567"],
+          ["grant_type", "refresh_token"],
+          ["without_new_session", "1"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements/48497841707623054",
+        "query": [],
+        "method": "POST",
+        "scope": "game",
+        "body": "{\"date_unlocked\":\"2026-02-01T12:00:00+0000\"}"
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": [
+      {
+        "achievement_id": "48497841707623054",
+        "body": {
+          "date_unlocked": "2026-02-01T12:00:00+0000"
+        }
+      }
+    ]
+  },
+  {
+    "label": "rejected: create",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue create",
+      "file": "<TEMP>/rejected.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue created: Cyberpunk 2077\nFile: <TEMP>/rejected.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-01-01 12:34:56\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue created: Cyberpunk 2077\nFile: <TEMP>/rejected.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-01-01 12:34:56\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "rejected: apply",
+    "outcome": {
+      "exitCode": 6,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/rejected.json",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "APPLY_INCOMPLETE",
+          "message": "Apply stopped. Inspect each result before retrying.",
+          "details": {
+            "report": {
+              "dry_run": false,
+              "user_id": "48628349957132247",
+              "game": {
+                "id": "1423049311",
+                "title": "Cyberpunk 2077",
+                "client_id": "14370605671234567"
+              },
+              "complete": false,
+              "results": [
+                {
+                  "achievement_id": "48497841707623054",
+                  "name": "Earned but missing",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": null,
+                  "status": "failed",
+                  "error_code": "API_REJECTED"
+                },
+                {
+                  "achievement_id": "48225958150521213",
+                  "name": "Second achievement",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": null,
+                  "status": "not_attempted"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Error [APPLY_INCOMPLETE]: Apply stopped.\nInspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nFailed: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n  Error: API_REJECTED\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "text100": "Error [APPLY_INCOMPLETE]: Apply stopped. Inspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nFailed: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n  Error: API_REJECTED\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"APPLY_INCOMPLETE\",\"message\":\"Apply stopped. Inspect each result before retrying.\",\"details\":{\"report\":{\"dry_run\":false,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":false,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"failed\",\"error_code\":\"API_REJECTED\"},{\"achievement_id\":\"48225958150521213\",\"name\":\"Second achievement\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"not_attempted\"}]}}}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"APPLY_INCOMPLETE\",\n    \"message\": \"Apply stopped. Inspect each result before retrying.\",\n    \"details\": {\n      \"report\": {\n        \"dry_run\": false,\n        \"user_id\": \"48628349957132247\",\n        \"game\": {\n          \"id\": \"1423049311\",\n          \"title\": \"Cyberpunk 2077\",\n          \"client_id\": \"14370605671234567\"\n        },\n        \"complete\": false,\n        \"results\": [\n          {\n            \"achievement_id\": \"48497841707623054\",\n            \"name\": \"Earned but missing\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": null,\n            \"status\": \"failed\",\n            \"error_code\": \"API_REJECTED\"\n          },\n          {\n            \"achievement_id\": \"48225958150521213\",\n            \"name\": \"Second achievement\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": null,\n            \"status\": \"not_attempted\"\n          }\n        ]\n      }\n    }\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "14370605671234567"],
+          ["grant_type", "refresh_token"],
+          ["without_new_session", "1"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements/48497841707623054",
+        "query": [],
+        "method": "POST",
+        "scope": "game",
+        "body": "{\"date_unlocked\":\"2026-01-01T12:34:56+0000\"}"
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      }
+    ],
+    "writes": [
+      {
+        "achievement_id": "48497841707623054",
+        "body": {
+          "date_unlocked": "2026-01-01T12:34:56+0000"
+        }
+      }
+    ]
+  },
+  {
+    "label": "lost-response: create",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue create",
+      "file": "<TEMP>/lost-response.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue created: Cyberpunk 2077\nFile: <TEMP>/lost-response.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-01-01 12:34:56\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue created: Cyberpunk 2077\nFile: <TEMP>/lost-response.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-01-01 12:34:56\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "lost-response: apply",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/lost-response.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "dry_run": false,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "complete": true,
+          "results": [
+            {
+              "achievement_id": "48497841707623054",
+              "name": "Earned but missing",
+              "requested_unlocked_at": "2026-01-01T12:34:56Z",
+              "previous_unlocked_at": null,
+              "actual_unlocked_at": "2026-01-01T12:34:56+0000",
+              "status": "restored"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "name": "Second achievement",
+              "requested_unlocked_at": "2026-01-01T12:34:56Z",
+              "previous_unlocked_at": null,
+              "actual_unlocked_at": "2026-01-01T12:34:56+0000",
+              "status": "restored"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Apply complete: Cyberpunk 2077\nGame ID: 1423049311\n\nRestored: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    2026-01-01 12:34:56\n\nRestored: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    2026-01-01 12:34:56\n",
+    "text100": "Apply complete: Cyberpunk 2077\nGame ID: 1423049311\n\nRestored: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    2026-01-01 12:34:56\n\nRestored: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    2026-01-01 12:34:56\n",
+    "json": "{\"ok\":true,\"data\":{\"dry_run\":false,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":true,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":\"2026-01-01T12:34:56+0000\",\"status\":\"restored\"},{\"achievement_id\":\"48225958150521213\",\"name\":\"Second achievement\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":\"2026-01-01T12:34:56+0000\",\"status\":\"restored\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"dry_run\": false,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"complete\": true,\n    \"results\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"name\": \"Earned but missing\",\n        \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n        \"previous_unlocked_at\": null,\n        \"actual_unlocked_at\": \"2026-01-01T12:34:56+0000\",\n        \"status\": \"restored\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"name\": \"Second achievement\",\n        \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n        \"previous_unlocked_at\": null,\n        \"actual_unlocked_at\": \"2026-01-01T12:34:56+0000\",\n        \"status\": \"restored\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "14370605671234567"],
+          ["grant_type", "refresh_token"],
+          ["without_new_session", "1"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements/48497841707623054",
+        "query": [],
+        "method": "POST",
+        "scope": "game",
+        "body": "{\"date_unlocked\":\"2026-01-01T12:34:56+0000\"}"
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements/48225958150521213",
+        "query": [],
+        "method": "POST",
+        "scope": "game",
+        "body": "{\"date_unlocked\":\"2026-01-01T12:34:56+0000\"}"
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      }
+    ],
+    "writes": [
+      {
+        "achievement_id": "48497841707623054",
+        "body": {
+          "date_unlocked": "2026-01-01T12:34:56+0000"
+        }
+      },
+      {
+        "achievement_id": "48225958150521213",
+        "body": {
+          "date_unlocked": "2026-01-01T12:34:56+0000"
+        }
+      }
+    ]
+  },
+  {
+    "label": "different-date: create",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue create",
+      "file": "<TEMP>/different-date.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue created: Cyberpunk 2077\nFile: <TEMP>/different-date.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-01-01 12:34:56\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue created: Cyberpunk 2077\nFile: <TEMP>/different-date.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-01-01 12:34:56\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "different-date: apply",
+    "outcome": {
+      "exitCode": 6,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/different-date.json",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "APPLY_INCOMPLETE",
+          "message": "Apply stopped. Inspect each result before retrying.",
+          "details": {
+            "report": {
+              "dry_run": false,
+              "user_id": "48628349957132247",
+              "game": {
+                "id": "1423049311",
+                "title": "Cyberpunk 2077",
+                "client_id": "14370605671234567"
+              },
+              "complete": false,
+              "results": [
+                {
+                  "achievement_id": "48497841707623054",
+                  "name": "Earned but missing",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": "2026-01-02T00:00:00Z",
+                  "status": "restored_with_different_date",
+                  "error_code": "UNLOCK_DATE_MISMATCH"
+                },
+                {
+                  "achievement_id": "48225958150521213",
+                  "name": "Second achievement",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": null,
+                  "status": "not_attempted"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Error [APPLY_INCOMPLETE]: Apply stopped.\nInspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nRestored with a different date: Earned\nbut missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    2026-01-02 00:00:00\n  Error: UNLOCK_DATE_MISMATCH\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "text100": "Error [APPLY_INCOMPLETE]: Apply stopped. Inspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nRestored with a different date: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    2026-01-02 00:00:00\n  Error: UNLOCK_DATE_MISMATCH\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"APPLY_INCOMPLETE\",\"message\":\"Apply stopped. Inspect each result before retrying.\",\"details\":{\"report\":{\"dry_run\":false,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":false,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":\"2026-01-02T00:00:00Z\",\"status\":\"restored_with_different_date\",\"error_code\":\"UNLOCK_DATE_MISMATCH\"},{\"achievement_id\":\"48225958150521213\",\"name\":\"Second achievement\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"not_attempted\"}]}}}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"APPLY_INCOMPLETE\",\n    \"message\": \"Apply stopped. Inspect each result before retrying.\",\n    \"details\": {\n      \"report\": {\n        \"dry_run\": false,\n        \"user_id\": \"48628349957132247\",\n        \"game\": {\n          \"id\": \"1423049311\",\n          \"title\": \"Cyberpunk 2077\",\n          \"client_id\": \"14370605671234567\"\n        },\n        \"complete\": false,\n        \"results\": [\n          {\n            \"achievement_id\": \"48497841707623054\",\n            \"name\": \"Earned but missing\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": \"2026-01-02T00:00:00Z\",\n            \"status\": \"restored_with_different_date\",\n            \"error_code\": \"UNLOCK_DATE_MISMATCH\"\n          },\n          {\n            \"achievement_id\": \"48225958150521213\",\n            \"name\": \"Second achievement\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": null,\n            \"status\": \"not_attempted\"\n          }\n        ]\n      }\n    }\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "14370605671234567"],
+          ["grant_type", "refresh_token"],
+          ["without_new_session", "1"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements/48497841707623054",
+        "query": [],
+        "method": "POST",
+        "scope": "game",
+        "body": "{\"date_unlocked\":\"2026-01-01T12:34:56+0000\"}"
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      }
+    ],
+    "writes": [
+      {
+        "achievement_id": "48497841707623054",
+        "body": {
+          "date_unlocked": "2026-01-01T12:34:56+0000"
+        }
+      }
+    ]
+  },
+  {
+    "label": "unconfirmed: create",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue create",
+      "file": "<TEMP>/unconfirmed.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue created: Cyberpunk 2077\nFile: <TEMP>/unconfirmed.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-01-01 12:34:56\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue created: Cyberpunk 2077\nFile: <TEMP>/unconfirmed.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-01-01 12:34:56\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "unconfirmed: apply",
+    "outcome": {
+      "exitCode": 6,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/unconfirmed.json",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "APPLY_INCOMPLETE",
+          "message": "Apply stopped. Inspect each result before retrying.",
+          "details": {
+            "report": {
+              "dry_run": false,
+              "user_id": "48628349957132247",
+              "game": {
+                "id": "1423049311",
+                "title": "Cyberpunk 2077",
+                "client_id": "14370605671234567"
+              },
+              "complete": false,
+              "results": [
+                {
+                  "achievement_id": "48497841707623054",
+                  "name": "Earned but missing",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": null,
+                  "status": "unconfirmed",
+                  "error_code": "UNLOCK_NOT_CONFIRMED"
+                },
+                {
+                  "achievement_id": "48225958150521213",
+                  "name": "Second achievement",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": null,
+                  "status": "not_attempted"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Error [APPLY_INCOMPLETE]: Apply stopped.\nInspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nUnconfirmed: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n  Error: UNLOCK_NOT_CONFIRMED\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "text100": "Error [APPLY_INCOMPLETE]: Apply stopped. Inspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nUnconfirmed: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n  Error: UNLOCK_NOT_CONFIRMED\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"APPLY_INCOMPLETE\",\"message\":\"Apply stopped. Inspect each result before retrying.\",\"details\":{\"report\":{\"dry_run\":false,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":false,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"unconfirmed\",\"error_code\":\"UNLOCK_NOT_CONFIRMED\"},{\"achievement_id\":\"48225958150521213\",\"name\":\"Second achievement\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"not_attempted\"}]}}}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"APPLY_INCOMPLETE\",\n    \"message\": \"Apply stopped. Inspect each result before retrying.\",\n    \"details\": {\n      \"report\": {\n        \"dry_run\": false,\n        \"user_id\": \"48628349957132247\",\n        \"game\": {\n          \"id\": \"1423049311\",\n          \"title\": \"Cyberpunk 2077\",\n          \"client_id\": \"14370605671234567\"\n        },\n        \"complete\": false,\n        \"results\": [\n          {\n            \"achievement_id\": \"48497841707623054\",\n            \"name\": \"Earned but missing\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": null,\n            \"status\": \"unconfirmed\",\n            \"error_code\": \"UNLOCK_NOT_CONFIRMED\"\n          },\n          {\n            \"achievement_id\": \"48225958150521213\",\n            \"name\": \"Second achievement\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": null,\n            \"status\": \"not_attempted\"\n          }\n        ]\n      }\n    }\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "14370605671234567"],
+          ["grant_type", "refresh_token"],
+          ["without_new_session", "1"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements/48497841707623054",
+        "query": [],
+        "method": "POST",
+        "scope": "game",
+        "body": "{\"date_unlocked\":\"2026-01-01T12:34:56+0000\"}"
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "changed: create",
+    "outcome": {
+      "exitCode": 0,
+      "pretty": false,
+      "format": "text",
+      "command": "queue create",
+      "file": "<TEMP>/changed.json",
+      "result": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "user_id": "48628349957132247",
+          "game": {
+            "id": "1423049311",
+            "title": "Cyberpunk 2077",
+            "client_id": "14370605671234567"
+          },
+          "created_at": "2026-10-14T11:59:50Z",
+          "updated_at": "2026-10-14T11:59:50Z",
+          "items": [
+            {
+              "achievement_id": "48497841707623054",
+              "key": "ACH_FIRST",
+              "name": "Earned but missing",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            },
+            {
+              "achievement_id": "48225958150521213",
+              "key": "ACH_SECOND",
+              "name": "Second achievement",
+              "unlocked_at": "2026-01-01T12:34:56Z"
+            }
+          ]
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Queue created: Cyberpunk 2077\nFile: <TEMP>/changed.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID: 48497841707623054\nAchievement: Earned but missing\nUnlock at (UTC): 2026-01-01 12:34:56\n\nAchievement ID: 48225958150521213\nAchievement: Second achievement\nUnlock at (UTC): 2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "text100": "Queue created: Cyberpunk 2077\nFile: <TEMP>/changed.json\nGame ID: 1423049311\n2 queued achievements\n\nAchievement ID     Achievement         Unlock at (UTC)\n-----------------  ------------------  -------------------\n48497841707623054  Earned but missing  2026-01-01 12:34:56\n48225958150521213  Second achievement  2026-01-01 12:34:56\n\nQueue edits only change the local file.\n",
+    "json": "{\"ok\":true,\"data\":{\"schema_version\":1,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"created_at\":\"2026-10-14T11:59:50Z\",\"updated_at\":\"2026-10-14T11:59:50Z\",\"items\":[{\"achievement_id\":\"48497841707623054\",\"key\":\"ACH_FIRST\",\"name\":\"Earned but missing\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"},{\"achievement_id\":\"48225958150521213\",\"key\":\"ACH_SECOND\",\"name\":\"Second achievement\",\"unlocked_at\":\"2026-01-01T12:34:56Z\"}]}}\n",
+    "pretty": "{\n  \"ok\": true,\n  \"data\": {\n    \"schema_version\": 1,\n    \"user_id\": \"48628349957132247\",\n    \"game\": {\n      \"id\": \"1423049311\",\n      \"title\": \"Cyberpunk 2077\",\n      \"client_id\": \"14370605671234567\"\n    },\n    \"created_at\": \"2026-10-14T11:59:50Z\",\n    \"updated_at\": \"2026-10-14T11:59:50Z\",\n    \"items\": [\n      {\n        \"achievement_id\": \"48497841707623054\",\n        \"key\": \"ACH_FIRST\",\n        \"name\": \"Earned but missing\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      },\n      {\n        \"achievement_id\": \"48225958150521213\",\n        \"key\": \"ACH_SECOND\",\n        \"name\": \"Second achievement\",\n        \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n      }\n    ]\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "changed: apply",
+    "outcome": {
+      "exitCode": 6,
+      "pretty": false,
+      "format": "text",
+      "command": "queue apply",
+      "file": "<TEMP>/changed.json",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "APPLY_INCOMPLETE",
+          "message": "Apply stopped. Inspect each result before retrying.",
+          "details": {
+            "report": {
+              "dry_run": false,
+              "user_id": "48628349957132247",
+              "game": {
+                "id": "1423049311",
+                "title": "Cyberpunk 2077",
+                "client_id": "14370605671234567"
+              },
+              "complete": false,
+              "results": [
+                {
+                  "achievement_id": "48497841707623054",
+                  "name": "Earned but missing",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": null,
+                  "status": "not_attempted",
+                  "error_code": "ACHIEVEMENT_CHANGED"
+                },
+                {
+                  "achievement_id": "48225958150521213",
+                  "name": "Second achievement",
+                  "requested_unlocked_at": "2026-01-01T12:34:56Z",
+                  "previous_unlocked_at": null,
+                  "actual_unlocked_at": null,
+                  "status": "not_attempted"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": "{\n  \"schema_version\": 1,\n  \"user_id\": \"48628349957132247\",\n  \"game\": {\n    \"id\": \"1423049311\",\n    \"title\": \"Cyberpunk 2077\",\n    \"client_id\": \"14370605671234567\"\n  },\n  \"created_at\": \"2026-10-14T11:59:50Z\",\n  \"updated_at\": \"2026-10-14T11:59:50Z\",\n  \"items\": [\n    {\n      \"achievement_id\": \"48497841707623054\",\n      \"key\": \"ACH_FIRST\",\n      \"name\": \"Earned but missing\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    },\n    {\n      \"achievement_id\": \"48225958150521213\",\n      \"key\": \"ACH_SECOND\",\n      \"name\": \"Second achievement\",\n      \"unlocked_at\": \"2026-01-01T12:34:56Z\"\n    }\n  ]\n}\n",
+    "text40": "Error [APPLY_INCOMPLETE]: Apply stopped.\nInspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nNot attempted: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n  Error: ACHIEVEMENT_CHANGED\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "text100": "Error [APPLY_INCOMPLETE]: Apply stopped. Inspect each result before retrying.\n\nApply incomplete: Cyberpunk 2077\nGame ID: 1423049311\n\nNot attempted: Earned but missing\n  ID: 48497841707623054\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n  Error: ACHIEVEMENT_CHANGED\n\nNot attempted: Second achievement\n  ID: 48225958150521213\n  Requested (UTC): 2026-01-01 12:34:56\n  Actual (UTC):    -\n\nCheck each result before retrying.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"APPLY_INCOMPLETE\",\"message\":\"Apply stopped. Inspect each result before retrying.\",\"details\":{\"report\":{\"dry_run\":false,\"user_id\":\"48628349957132247\",\"game\":{\"id\":\"1423049311\",\"title\":\"Cyberpunk 2077\",\"client_id\":\"14370605671234567\"},\"complete\":false,\"results\":[{\"achievement_id\":\"48497841707623054\",\"name\":\"Earned but missing\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"not_attempted\",\"error_code\":\"ACHIEVEMENT_CHANGED\"},{\"achievement_id\":\"48225958150521213\",\"name\":\"Second achievement\",\"requested_unlocked_at\":\"2026-01-01T12:34:56Z\",\"previous_unlocked_at\":null,\"actual_unlocked_at\":null,\"status\":\"not_attempted\"}]}}}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"APPLY_INCOMPLETE\",\n    \"message\": \"Apply stopped. Inspect each result before retrying.\",\n    \"details\": {\n      \"report\": {\n        \"dry_run\": false,\n        \"user_id\": \"48628349957132247\",\n        \"game\": {\n          \"id\": \"1423049311\",\n          \"title\": \"Cyberpunk 2077\",\n          \"client_id\": \"14370605671234567\"\n        },\n        \"complete\": false,\n        \"results\": [\n          {\n            \"achievement_id\": \"48497841707623054\",\n            \"name\": \"Earned but missing\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": null,\n            \"status\": \"not_attempted\",\n            \"error_code\": \"ACHIEVEMENT_CHANGED\"\n          },\n          {\n            \"achievement_id\": \"48225958150521213\",\n            \"name\": \"Second achievement\",\n            \"requested_unlocked_at\": \"2026-01-01T12:34:56Z\",\n            \"previous_unlocked_at\": null,\n            \"actual_unlocked_at\": null,\n            \"status\": \"not_attempted\"\n          }\n        ]\n      }\n    }\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "auth.gog.com",
+        "path": "/token",
+        "query": [
+          ["client_id", "14370605671234567"],
+          ["grant_type", "refresh_token"],
+          ["without_new_session", "1"]
+        ],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "game",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "malformed: null",
+    "outcome": {
+      "exitCode": 4,
+      "pretty": false,
+      "format": "text",
+      "command": "achievements list",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "INVALID_RESPONSE",
+          "message": "GOG returned an invalid owned-game list."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Error [INVALID_RESPONSE]: GOG returned\nan invalid owned-game list.\n",
+    "text100": "Error [INVALID_RESPONSE]: GOG returned an invalid owned-game list.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"INVALID_RESPONSE\",\"message\":\"GOG returned an invalid owned-game list.\"}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"INVALID_RESPONSE\",\n    \"message\": \"GOG returned an invalid owned-game list.\"\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "malformed: {\"items\":[null]}",
+    "outcome": {
+      "exitCode": 4,
+      "pretty": false,
+      "format": "text",
+      "command": "achievements list",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "The command failed. No account change was confirmed."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Error [INTERNAL_ERROR]: The command\nfailed. No account change was confirmed.\n",
+    "text100": "Error [INTERNAL_ERROR]: The command failed. No account change was confirmed.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"INTERNAL_ERROR\",\"message\":\"The command failed. No account change was confirmed.\"}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"INTERNAL_ERROR\",\n    \"message\": \"The command failed. No account change was confirmed.\"\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/builds/1007860867957265845.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      },
+      {
+        "host": "gameplay.gog.com",
+        "path": "/clients/14370605671234567/users/48628349957132247/achievements",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "malformed: {\"builds\":[null]}",
+    "outcome": {
+      "exitCode": 4,
+      "pretty": false,
+      "format": "text",
+      "command": "achievements list",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "The command failed. No account change was confirmed."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Error [INTERNAL_ERROR]: The command\nfailed. No account change was confirmed.\n",
+    "text100": "Error [INTERNAL_ERROR]: The command failed. No account change was confirmed.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"INTERNAL_ERROR\",\"message\":\"The command failed. No account change was confirmed.\"}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"INTERNAL_ERROR\",\n    \"message\": \"The command failed. No account change was confirmed.\"\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      },
+      {
+        "host": "www.gogdb.org",
+        "path": "/data/products/1423049311/product.json",
+        "query": [],
+        "method": "GET",
+        "scope": "none",
+        "body": null
+      }
+    ],
+    "writes": []
+  },
+  {
+    "label": "malformed: {\"owned\":null}",
+    "outcome": {
+      "exitCode": 4,
+      "pretty": false,
+      "format": "text",
+      "command": "achievements list",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "INVALID_RESPONSE",
+          "message": "GOG returned an invalid owned-game list."
+        }
+      }
+    },
+    "properties": ["exitCode", "pretty", "format", "command", "file", "result"],
+    "queue": null,
+    "text40": "Error [INVALID_RESPONSE]: GOG returned\nan invalid owned-game list.\n",
+    "text100": "Error [INVALID_RESPONSE]: GOG returned an invalid owned-game list.\n",
+    "json": "{\"ok\":false,\"error\":{\"code\":\"INVALID_RESPONSE\",\"message\":\"GOG returned an invalid owned-game list.\"}}\n",
+    "pretty": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"INVALID_RESPONSE\",\n    \"message\": \"GOG returned an invalid owned-game list.\"\n  }\n}\n",
+    "requests": [
+      {
+        "host": "embed.gog.com",
+        "path": "/user/data/games",
+        "query": [],
+        "method": "GET",
+        "scope": "account",
+        "body": null
+      }
+    ],
+    "writes": []
+  }
+]

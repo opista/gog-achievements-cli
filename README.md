@@ -24,10 +24,11 @@ The release workflow targets macOS 13.5 or later on Apple Silicon and Intel, and
 
 ## Build from source
 
-Source use requires Node 22 or later. Use Node 24 LTS for release builds; CI pins 24.19.0. Mac builds require Xcode Command Line Tools. Windows builds require the .NET 10 SDK selected by `global.json`.
+The emitted source CLI requires Node 22 or later. Use Node 24 LTS for development and release builds; CI pins 24.19.0. Mac builds require Xcode Command Line Tools. Windows builds require the .NET 10 SDK selected by `global.json`.
 
 ```sh
 npm ci --ignore-scripts
+npm run compile
 npm run check
 npm test
 npm run build
@@ -46,6 +47,8 @@ npm run build -- --help
 Run each command on its target OS with the matching Node architecture. For example, `macos-x64` needs x64 Node, including when running under Rosetta on Apple Silicon. A target mismatch fails before compilation or file changes. Each build replaces only its own output; other targets in `dist/` are kept. CI builds all four targets on matching runners.
 
 Apple Silicon and Windows builds embed the runtime and helper in one executable. Intel Mac builds use a native launcher with a private runtime and helper folder; keep that extracted folder intact. This handles the Node single-executable limitation on Intel Macs.
+
+Application code, tests and fixtures use strict TypeScript ESM (`.mts`). `compile` emits JavaScript and declarations under `.build/typescript/`. Run it after installation and after source edits. `check`, test, demo and build commands compile their inputs automatically. Build help and target validation run before compilation.
 
 Run the source CLI with `node bin/gog-achievements.mjs`, or install its command with `npm install --global . --ignore-scripts` after building the helper. Source installation requires Node; release executables do not.
 

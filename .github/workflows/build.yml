@@ -66,6 +66,7 @@ jobs:
           }
           if ($install.ExitCode -ne 0) { throw 'WebView2 installation failed.' }
       - run: npm run build -- --target ${{ matrix.target }}
+      - run: npm run verify:package
       - uses: actions/upload-artifact@v6
         with:
           name: distribution-${{ matrix.target }}

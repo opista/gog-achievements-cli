@@ -4,6 +4,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BUILD_TARGETS } from './build-targets.mjs';
 
+/** @param {string | undefined} tag
+ * @param {{directory?: string, version?: string}} [options] */
 export async function verifyRelease(tag, { directory = 'dist', version } = {}) {
   version ??= JSON.parse(await readFile('package.json', 'utf8')).version;
   if (tag !== `v${version}`) throw new Error('The release tag must match package.json version.');
