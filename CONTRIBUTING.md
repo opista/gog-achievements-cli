@@ -8,25 +8,28 @@ npm run test:coverage
 npm run build
 ```
 
+Use `npm run build -- --target TARGET` to select `macos-arm64`, `macos-x64`, `windows-arm64` or `windows-x64`. Run the build on that OS with matching Node architecture. Use `npm run build -- --help` for details. The default is the current OS and Node architecture; other targets' output files are kept.
+
 `check` runs syntax, ESLint and Prettier checks. Use `npm run format` to format changes. Coverage must meet 95% lines, 85% branches and 90% functions for `src/`. Tests use fixtures, temporary files and a local HTTP server. They never write achievements to a real GOG account.
 
 ## Code map
 
-| File                     | Responsibility                                                      |
-| ------------------------ | ------------------------------------------------------------------- |
-| `src/cli.mjs`            | Parse and validate commands.                                        |
-| `src/help.mjs`           | Command definitions, flags and help.                                |
-| `src/output.mjs`         | Human text and JSON rendering.                                      |
-| `src/service.mjs`        | Account checks, queue planning and achievement restoration.         |
-| `src/api.mjs`            | GOG requests, paging and response validation.                       |
-| `src/data.mjs`           | String IDs, UTC dates, queue files and locks.                       |
-| `src/keychain.mjs`       | Shared credential protocol with platform-specific storage settings. |
-| `src/native-login.mjs`   | Capture native login results and validate OAuth state.              |
-| `src/process.mjs`        | Private native IPC, cancellation, byte limits and deadlines.        |
-| `src/assets.mjs`         | Load and verify bundled native helpers.                             |
-| `native/gog-login.swift` | macOS WebKit sign-in and Keychain access.                           |
-| `native/windows/`        | Windows WebView2 sign-in and DPAPI storage.                         |
-| `scripts/build.mjs`      | Package and smoke-test the current platform's distribution.         |
+| File                        | Responsibility                                                      |
+| --------------------------- | ------------------------------------------------------------------- |
+| `src/cli.mjs`               | Parse and validate commands.                                        |
+| `src/help.mjs`              | Command definitions, flags and help.                                |
+| `src/output.mjs`            | Human text and JSON rendering.                                      |
+| `src/service.mjs`           | Account checks, queue planning and achievement restoration.         |
+| `src/api.mjs`               | GOG requests, paging and response validation.                       |
+| `src/data.mjs`              | String IDs, UTC dates, queue files and locks.                       |
+| `src/keychain.mjs`          | Shared credential protocol with platform-specific storage settings. |
+| `src/native-login.mjs`      | Capture native login results and validate OAuth state.              |
+| `src/process.mjs`           | Private native IPC, cancellation, byte limits and deadlines.        |
+| `src/assets.mjs`            | Load and verify bundled native helpers.                             |
+| `native/gog-login.swift`    | macOS WebKit sign-in and Keychain access.                           |
+| `native/windows/`           | Windows WebView2 sign-in and DPAPI storage.                         |
+| `scripts/build.mjs`         | Package and smoke-test the selected target's distribution.          |
+| `scripts/build-targets.mjs` | Shared target definitions and build argument validation.            |
 
 Keep account operations in the service and HTTP details in the API. Output code must not perform network calls. Add tests for behaviour and failure paths; avoid tests that only copy an implementation.
 

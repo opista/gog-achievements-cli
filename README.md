@@ -33,7 +33,19 @@ npm test
 npm run build
 ```
 
-`build` builds the native helper, bundles the CLI with the current Node runtime, runs smoke checks outside the checkout, and creates a ZIP plus SHA-256 checksum in `dist/`. It builds for the current OS and Node architecture. Apple Silicon and Windows builds embed the runtime and helper in one executable. Intel Mac builds use a native launcher with a private runtime and helper folder; keep that extracted folder intact. This handles the Node single-executable limitation on Intel Macs. There is no `build:mac` command.
+`build` builds the native helper, bundles the CLI with the current Node runtime, runs smoke checks outside the checkout, and creates a ZIP plus SHA-256 checksum in `dist/`. By default, it selects the current OS and Node architecture. To select one target explicitly:
+
+```sh
+npm run build -- --target macos-arm64
+npm run build -- --target macos-x64
+npm run build -- --target windows-arm64
+npm run build -- --target windows-x64
+npm run build -- --help
+```
+
+Run each command on its target OS with the matching Node architecture. For example, `macos-x64` needs x64 Node, including when running under Rosetta on Apple Silicon. A target mismatch fails before compilation or file changes. Each build replaces only its own output; other targets in `dist/` are kept. CI builds all four targets on matching runners.
+
+Apple Silicon and Windows builds embed the runtime and helper in one executable. Intel Mac builds use a native launcher with a private runtime and helper folder; keep that extracted folder intact. This handles the Node single-executable limitation on Intel Macs.
 
 Run the source CLI with `node bin/gog-achievements.mjs`, or install its command with `npm install --global . --ignore-scripts` after building the helper. Source installation requires Node; release executables do not.
 

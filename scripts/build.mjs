@@ -6,13 +6,12 @@ import { resolve, join, dirname } from 'node:path';
 import { build } from 'esbuild';
 import { inject } from 'postject';
 import { buildNative } from './build-native.mjs';
+import { BUILD_HELP, parseBuildArguments, selectBuildTarget } from './build-targets.mjs';
 
 const execute = promisify(execFile);
-const platform = process.platform;
-const architecture = process.arch;
 const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
 
-async function packageSingleExecutable(executable, bundle, staging, helper) {
+async function packageSingleExecutable(executable, bundle, staging, helper, platform) {
   const blob = join(staging, 'sea.blob');
   const config = join(staging, 'sea.json');
   await writeFile(
@@ -86,7 +85,7 @@ async function copyDocumentation(folder) {
   }
 }
 
-async function createArchive(folder, folderName) {
+async function createArchive(folder, folderName, platform) {
   const archive = resolve('dist', `${folderName}.zip`);
   await rm(archive, { force: true });
   if (platform === 'darwin')
@@ -115,13 +114,12 @@ async function createArchive(folder, folderName) {
 }
 
 async function main() {
-  if (!['darwin', 'win32'].includes(platform) || !['arm64', 'x64'].includes(architecture)) {
-    throw new Error('Build on macOS or Windows using arm64 or x64 Node.');
+  const options = parseBuildArguments(process.argv.slice(2));
+  if (options.help) {
+    process.stdout.write(BUILD_HELP);
+    return;
   }
-  if (process.argv.length > 2)
-    throw new Error(
-      'build creates a release for the current platform and Node architecture. Other targets build on native CI runners.',
-    );
+  const { name: label, platform, architecture } = selectBuildTarget(options.target);
   const { version } = JSON.parse(await readFile('package.json', 'utf8'));
   if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version))
     throw new Error('package.json must have a valid release version.');
@@ -130,7 +128,6 @@ async function main() {
     (process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : undefined);
   if (tag && tag !== `v${version}`)
     throw new Error('The release tag must match package.json version.');
-  const label = `${platform === 'darwin' ? 'macos' : 'windows'}-${architecture}`;
   const folderName = `gog-achievements-${version}-${label}`;
   const folder = resolve('dist', folderName);
   const staging = resolve('.build', label);
@@ -138,7 +135,7 @@ async function main() {
     await rm(path, { recursive: true, force: true });
     await mkdir(path, { recursive: true });
   }
-  const helper = await buildNative();
+  const helper = await buildNative({ platform, architecture });
   const bundle = join(staging, 'main.cjs');
   await build({
     entryPoints: ['scripts/standalone-entry.mjs'],
@@ -154,7 +151,7 @@ async function main() {
   const portable = platform === 'darwin' && architecture === 'x64';
   process.stdout.write(`Packaging ${label} executable with Node ${process.versions.node}...\n`);
   if (portable) await packageIntelMac(executable, bundle, folder, helper);
-  else await packageSingleExecutable(executable, bundle, staging, helper);
+  else await packageSingleExecutable(executable, bundle, staging, helper, platform);
   if (platform === 'darwin')
     await execute('/usr/bin/codesign', ['--force', '--sign', '-', executable], { timeout: 10000 });
   await copyDocumentation(folder);
@@ -180,8 +177,13 @@ async function main() {
     maxBuffer: 1_000_000,
   });
   process.stdout.write(smoke.stdout);
-  const archive = await createArchive(folder, folderName);
+  const archive = await createArchive(folder, folderName, platform);
   process.stdout.write(`Built ${executable}\nArchive: ${archive}\n`);
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  process.stderr.write(`Build failed: ${error.message}\n`);
+  process.exitCode = 1;
+}

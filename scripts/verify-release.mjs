@@ -2,13 +2,12 @@ import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-const TARGETS = ['macos-arm64', 'macos-x64', 'windows-arm64', 'windows-x64'];
+import { BUILD_TARGETS } from './build-targets.mjs';
 
 export async function verifyRelease(tag, { directory = 'dist', version } = {}) {
   version ??= JSON.parse(await readFile('package.json', 'utf8')).version;
   if (tag !== `v${version}`) throw new Error('The release tag must match package.json version.');
-  const archives = TARGETS.map((target) => `gog-achievements-${version}-${target}.zip`);
+  const archives = BUILD_TARGETS.map(({ name }) => `gog-achievements-${version}-${name}.zip`);
   const expected = archives.flatMap((name) => [name, `${name}.sha256`]).sort();
   const actual = (await readdir(directory)).sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected))

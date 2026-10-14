@@ -65,7 +65,7 @@ jobs:
             throw 'WebView2 installation timed out.'
           }
           if ($install.ExitCode -ne 0) { throw 'WebView2 installation failed.' }
-      - run: npm run build
+      - run: npm run build -- --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v6
         with:
           name: distribution-${{ matrix.target }}
