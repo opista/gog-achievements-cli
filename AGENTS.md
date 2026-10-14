@@ -1,8 +1,8 @@
 # Project instructions
 
-- This project restores earned GOG achievements. The first release is a Mac CLI; Electron is a later phase.
+- This project is a standalone Mac CLI for restoring earned GOG achievements.
 - Use Node 22 or later. The only runtime package is the native Keychain binding.
-- Keep `src/service.mjs` independent of the CLI and Electron so both can use the same behavior.
+- Keep `src/service.mjs` independent of CLI parsing and output formatting. External applications consume the CLI through its JSON contract; do not add application-specific plans or dependencies here.
 - Commands show readable text by default. Use `--json` for one compact JSON object on stdout; add `--pretty` for indentation. Preserve string IDs, error codes, exit codes and queue schema version 1. In text mode, errors go to stderr.
 - Login codes and tokens must not appear in arguments, files, logs, reports or chat. Store credentials in Mac Keychain. Automatic login captures GOG's registered callback in a controlled, nonpersistent native WebKit window. Its private IPC response must never reach CLI stdout. Manual input uses stdin or the explicit clipboard command.
 - GOG rejects custom loopback redirects for the Galaxy OAuth client. Keep the exact registered redirect URL when opening sign-in and exchanging the code.
