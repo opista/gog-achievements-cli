@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag to build or retry
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ inputs.tag }}
+      release-tag: ${{ inputs.tag }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: distribution-*
+          path: dist
+          merge-multiple: true
+      - name: Verify and publish all release assets
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          node scripts/verify-release.mjs "$RELEASE_TAG"
+          if [ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" != "true" ]; then
+            echo "Only draft releases can be published by this workflow." >&2
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" dist/*.zip dist/*.sha256 --clobber
+          gh release edit "$RELEASE_TAG" --draft=false
