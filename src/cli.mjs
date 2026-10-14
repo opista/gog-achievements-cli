@@ -3,9 +3,10 @@ import { GogAchievements } from './service.mjs';
 import { GogError, errorResult, requireValue } from './errors.mjs';
 import { readQueue, saveQueue, withQueueLock, id } from './data.mjs';
 import { runProcess } from './keychain.mjs';
+import { loginWithBrowser } from './browser-login.mjs';
 
 const COMMANDS = {
-  'auth login': { flags: ['no-open'], description: 'Open GOG sign-in. Complete it with auth finish.' },
+  'auth login': { flags: ['no-open', 'timeout'], description: 'Open GOG sign-in, wait for the browser callback, and save login. --timeout is seconds (default 180).' },
   'auth finish': { flags: ['stdin', 'clipboard'], description: 'Read the final login URL or code and save login in Mac Keychain.' },
   'auth import': { flags: ['stdin'], description: 'Import a refresh token through stdin. Never put a token in an argument.' },
   'auth status': { flags: [], description: 'Read local login status without revealing tokens.' },
@@ -29,7 +30,6 @@ export const HELP = {
     4: 'network or API response failure', 5: 'ownership, account, queue lock or game conflict', 6: 'apply incomplete', 7: 'Mac Keychain or process failure' },
   examples: [
     'gog-achievements auth login',
-    'gog-achievements auth finish --clipboard',
     'gog-achievements games list --search Cyberpunk',
     'gog-achievements achievements list --game GAME_ID',
     'gog-achievements queue create --game GAME_ID --file queue.json --achievement ACHIEVEMENT_ID',
@@ -56,7 +56,8 @@ async function readStdin(input) {
   });
 }
 
-export async function runCLI(args, { service = new GogAchievements(), stdin = process.stdin, execute = runProcess, platform = process.platform } = {}) {
+export async function runCLI(args, { service = new GogAchievements(), stdin = process.stdin, stderr = process.stderr,
+  execute = runProcess, platform = process.platform, browserLogin = loginWithBrowser } = {}) {
   let pretty = args.includes('--pretty');
   try {
     let parsed;
@@ -67,6 +68,7 @@ export async function runCLI(args, { service = new GogAchievements(), stdin = pr
         achievement: { type: 'string', multiple: true }, 'unlocked-at': { type: 'string' },
         stdin: { type: 'boolean' }, clipboard: { type: 'boolean' }, 'no-open': { type: 'boolean' },
         'ids-only': { type: 'boolean' }, yes: { type: 'boolean' }, 'dry-run': { type: 'boolean' },
+        timeout: { type: 'string' },
       } });
     } catch { throw new GogError('INVALID_ARGUMENTS', 'Invalid command arguments. Run --help for the command list.', 2); }
     const { values: flags, positionals } = parsed;
@@ -85,14 +87,29 @@ export async function runCLI(args, { service = new GogAchievements(), stdin = pr
     for (const value of flags.achievement ?? []) id(value, 'Achievement ID');
     let data;
     if (command === 'auth login') {
-      let opened = false;
-      if (!flags['no-open']) {
+      const timeout = flags.timeout === undefined ? 180 : Number(flags.timeout);
+      requireValue(Number.isInteger(timeout) && timeout >= 10 && timeout <= 600,
+        'INVALID_LOGIN_TIMEOUT', '--timeout must be a number of seconds from 10 to 600.');
+      if (flags['no-open']) {
+        requireValue(flags.timeout === undefined, 'INVALID_ARGUMENTS', '--timeout applies to automatic browser sign-in.');
+        data = { authenticated: false, action_required: 'complete_manual_browser_login', browser_opened: false,
+          login_url: service.loginURL(), next_command: 'node bin/gog-achievements.mjs auth finish --clipboard',
+          instructions: 'Open the URL, complete GOG sign-in, copy the final redirected URL, then run the next command locally.' };
+      } else {
         requireValue(platform === 'darwin', 'MAC_REQUIRED', 'Use --no-open to obtain a login URL on this platform.', 7);
-        opened = (await execute('/usr/bin/open', [service.loginURL()])).code === 0;
+        const abort = new AbortController();
+        const onInterrupt = () => abort.abort();
+        process.once('SIGINT', onInterrupt);
+        process.once('SIGTERM', onInterrupt);
+        try {
+          data = await browserLogin({ service, timeoutMs: timeout * 1000, signal: abort.signal,
+            progress: message => stderr.write(`${message}\n`),
+            openBrowser: async url => (await execute('/usr/bin/open', [url])).code === 0 });
+        } finally {
+          process.removeListener('SIGINT', onInterrupt);
+          process.removeListener('SIGTERM', onInterrupt);
+        }
       }
-      data = { authenticated: false, action_required: 'complete_browser_login', browser_opened: opened,
-        login_url: service.loginURL(), next_command: 'gog-achievements auth finish --clipboard',
-        instructions: 'Complete GOG sign-in, copy the final redirected URL, then run the next command locally. Do not paste it into an AI chat.' };
     } else if (command === 'auth finish' || command === 'auth import') {
       requireValue(command === 'auth import' ? flags.stdin && !flags.clipboard : !!flags.stdin !== !!flags.clipboard,
         'INPUT_SOURCE_REQUIRED', command === 'auth import' ? 'Use --stdin to import a refresh token.' : 'Use exactly one of --stdin or --clipboard.');

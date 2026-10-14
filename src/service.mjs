@@ -1,5 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import { GogAPI, LOGIN_URL } from './api.mjs';
+import { GogAPI, buildLoginURL, LOGIN_REDIRECT } from './api.mjs';
 import { MacKeychain } from './keychain.mjs';
 import { GogError, requireValue } from './errors.mjs';
 import { id, timestamp, defaultTimestamp, validateQueue } from './data.mjs';
@@ -7,7 +7,7 @@ import { id, timestamp, defaultTimestamp, validateQueue } from './data.mjs';
 function validSession(session) {
   requireValue(session && typeof session.access_token === 'string' && session.access_token &&
     typeof session.refresh_token === 'string' && session.refresh_token && Number.isFinite(session.expires_at),
-    'AUTH_REQUIRED', 'Sign in with auth login, then auth finish.', 3);
+    'AUTH_REQUIRED', 'Sign in with auth login.', 3);
   id(session.user_id, 'User ID');
   return session;
 }
@@ -21,20 +21,27 @@ export class GogAchievements {
     this.cachedSession = null;
   }
 
-  loginURL() { return LOGIN_URL; }
+  loginURL(options) { return buildLoginURL(options); }
 
-  async finishLogin(input) {
+  async finishLogin(input, { redirectURI = LOGIN_REDIRECT, signal } = {}) {
+    const checkCancelled = () => {
+      if (signal?.aborted) throw new GogError('AUTH_CANCELLED', 'Sign-in was cancelled.', 3);
+    };
+    checkCancelled();
     let code = input.trim();
     if (/^https?:/i.test(code)) {
       let url;
       try { url = new URL(code); } catch { throw new GogError('INVALID_LOGIN_CODE', 'Use the final GOG login URL.', 2); }
       requireValue(url.protocol === 'https:' && ['embed.gog.com', 'www.gog.com'].includes(url.hostname) &&
-        url.pathname === '/on_login_success' && !url.username && !url.password && !url.port,
-        'INVALID_LOGIN_CODE', 'Use the final GOG login URL.', 2);
+        url.pathname.replace(/\/$/, '') === '/on_login_success' && !url.username && !url.password && !url.port,
+        'INVALID_LOGIN_CODE', 'This URL is not the GOG login callback. Run auth login for automatic sign-in.', 2);
       code = url.searchParams.get('code') ?? '';
     }
     requireValue(/^[A-Za-z0-9._~+=/-]{1,4096}$/.test(code), 'INVALID_LOGIN_CODE', 'The login code is missing or not valid.', 2);
-    const session = validSession(await this.api.exchangeCode(code));
+    let session;
+    try { session = validSession(await this.api.exchangeCode(code, redirectURI, { signal })); }
+    catch (error) { checkCancelled(); throw error; }
+    checkCancelled();
     await this.vault.set(session);
     this.cachedSession = session;
     return { authenticated: true, user_id: session.user_id, storage: 'macos_keychain' };

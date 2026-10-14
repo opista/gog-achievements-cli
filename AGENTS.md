@@ -4,7 +4,8 @@
 - Use Node 22 or later. The only runtime package is the native Keychain binding.
 - Keep `src/service.mjs` independent of the CLI and Electron so both can use the same behavior.
 - Commands return one JSON object on stdout. Preserve string IDs, error codes, exit codes and queue schema version 1.
-- Login codes and tokens must not appear in arguments, files, logs, reports or chat. Store credentials in Mac Keychain. Read login input through stdin or the explicit clipboard command.
+- Login codes and tokens must not appear in arguments, files, logs, reports or chat. Store credentials in Mac Keychain. Automatic login uses a temporary loopback callback with an unpredictable path and OAuth state; manual input uses stdin or the explicit clipboard command.
+- `auth login` must complete sign-in in one command. Always close its callback server after success, cancellation, timeout or failure. Keep progress on stderr and the final JSON on stdout.
 - Queue creation and edits make no achievement writes. Apply previews by default; `--yes` is required for writes.
 - Validate the entire queue, account and game before any write. Never send a null unlock date.
 - Preserve existing unlocks. Do not add reset or relock commands without an explicit request.

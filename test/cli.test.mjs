@@ -9,6 +9,41 @@ import { runCLI } from '../src/cli.mjs';
 import { MacKeychain } from '../src/keychain.mjs';
 import { fixture, GAME_ID, ACHIEVEMENT_ID, DATE } from './fixture.mjs';
 
+test('auth login waits for automatic sign-in and returns the completed login', async () => {
+  const f = fixture();
+  const progress = [];
+  const result = await runCLI(['auth', 'login', '--timeout', '120'], {
+    service: f.service, platform: 'darwin', stderr: { write: message => progress.push(message) },
+    execute: async (command, args) => {
+      assert.equal(command, '/usr/bin/open');
+      assert.equal(new URL(args[0]).hostname, 'auth.gog.com');
+      return { code: 0 };
+    },
+    browserLogin: async options => {
+      assert.equal(options.timeoutMs, 120000);
+      options.progress('Complete sign-in.');
+      assert.equal(await options.openBrowser(f.service.loginURL()), true);
+      return { authenticated: true, user_id: '123', storage: 'macos_keychain', method: 'browser_callback' };
+    },
+  });
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.result.data.authenticated, true);
+  assert.equal(result.result.data.next_command, undefined);
+  assert.deepEqual(progress, ['Complete sign-in.\n']);
+});
+
+test('manual login remains available and invalid wait limits do not open a browser', async () => {
+  const f = fixture();
+  const deps = { service: f.service, execute: async () => { throw new Error('Must not open'); } };
+  const manual = await runCLI(['auth', 'login', '--no-open'], deps);
+  assert.equal(manual.exitCode, 0);
+  assert.equal(manual.result.data.action_required, 'complete_manual_browser_login');
+  assert.equal(manual.result.data.next_command, 'node bin/gog-achievements.mjs auth finish --clipboard');
+  for (const value of ['oops', '0', '601', '1.5']) {
+    assert.equal((await runCLI(['auth', 'login', '--timeout', value], deps)).exitCode, 2);
+  }
+});
+
 test('the executable emits exactly one JSON object and a useful failure exit code', () => {
   for (const [args, expected] of [[['--help'], 0], [['unknown-command'], 2], [['queue', 'apply', '--yes'], 2]]) {
     const child = spawnSync(process.execPath, ['bin/gog-achievements.mjs', ...args], { encoding: 'utf8', timeout: 5000 });

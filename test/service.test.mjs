@@ -162,4 +162,6 @@ test('login accepts only a GOG redirect and never returns credentials', async ()
   const result = await f.service.finishLogin('https://embed.gog.com/on_login_success?origin=client&code=test-login-code');
   assert.equal(result.authenticated, true);
   assert.ok(!JSON.stringify(result).includes('fake-refreshed-token'));
+  const trailing = await f.service.finishLogin('https://embed.gog.com/on_login_success/?origin=client&code=test-login-code');
+  assert.equal(trailing.authenticated, true);
 });

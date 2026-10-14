@@ -21,16 +21,19 @@ Use `node bin/gog-achievements.mjs` below, or install a local command with `npm 
 node bin/gog-achievements.mjs auth login
 ```
 
-Complete sign-in in your browser. Copy the final GOG redirect URL from its address bar, then run:
+Complete sign-in in the browser that opens. The same command receives the login code, saves your login in Mac Keychain and returns `authenticated: true`. It requires no copied URL or second command. The browser displays **Signed in** when the login is saved.
+
+The command waits up to three minutes for browser sign-in. Use `auth login --timeout 300` to allow five minutes. Press Ctrl+C to cancel. The temporary callback listens only on `127.0.0.1`, checks OAuth state and closes when the command ends. Progress appears on stderr; stdout contains the final JSON result.
+
+You can check the saved login with:
 
 ```sh
-node bin/gog-achievements.mjs auth finish --clipboard
 node bin/gog-achievements.mjs auth status
 ```
 
-The final URL contains a temporary login code. Keep it on your Mac; do not paste it into an AI chat or a command argument. `auth finish --stdin` also accepts the final URL or its code from a pipe. `auth import --stdin` accepts an existing refresh token from a pipe.
+For manual sign-in, `auth login --no-open` returns the standard GOG login URL. Open that URL, complete sign-in, copy the final callback URL and run `auth finish --clipboard`. The URL contains a temporary login code; keep it on your Mac and do not paste it into an AI chat or a command argument. `auth finish --stdin` also accepts the final URL or its code from a pipe. `auth import --stdin` accepts an existing refresh token from a pipe.
 
-`auth login --no-open` returns the login URL without opening a browser. `auth logout` removes this tool's local login. It does not sign out GOG Galaxy or revoke other sessions.
+`auth logout` removes this tool's local login. It does not sign out GOG Galaxy or revoke other sessions.
 
 Credentials stay in the `gog-achievements-cli` entry in Mac Keychain. Commands, queues and reports do not contain tokens.
 
@@ -110,7 +113,7 @@ Every command returns one JSON object on stdout, with no prompts or diagnostic t
 ```
 
 ```json
-{ "ok": false, "error": { "code": "AUTH_REQUIRED", "message": "Sign in with auth login, then auth finish." } }
+{ "ok": false, "error": { "code": "AUTH_REQUIRED", "message": "Sign in with auth login." } }
 ```
 
 | Exit | Meaning |
@@ -123,7 +126,7 @@ Every command returns one JSON object on stdout, with no prompts or diagnostic t
 | 6 | Apply incomplete; read the per-achievement report. |
 | 7 | Mac Keychain or local process failure. |
 
-HTTP requests have a 15 second timeout; Keychain operations have a 5 second cancellation signal. Login stdin waits at most 30 seconds. The CLI rejects redirects for API requests and does not print raw server bodies, tokens or credential URLs in errors.
+HTTP requests have a 15 second timeout; Keychain operations have a 5 second cancellation signal. Automatic login waits up to 180 seconds for the browser response by default, then uses the normal API and Keychain limits. Manual login stdin waits at most 30 seconds. The CLI rejects redirects for API requests and does not print raw server bodies, tokens or credential URLs in errors.
 
 ## Shared core and Electron phase
 

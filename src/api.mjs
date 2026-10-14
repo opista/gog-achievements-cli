@@ -5,7 +5,11 @@ import { id, parseJSON, timestamp } from './data.mjs';
 const GALAXY_CLIENT_ID = '46899977096215655';
 const GALAXY_CLIENT_SECRET = '9d85c43b1482497dbbce61f6e4aa173a433796eeae2ca8c5f6129f2dc4de46d9';
 export const LOGIN_REDIRECT = 'https://embed.gog.com/on_login_success?origin=client';
-export const LOGIN_URL = `https://auth.gog.com/auth?${new URLSearchParams({ client_id: GALAXY_CLIENT_ID, redirect_uri: LOGIN_REDIRECT, response_type: 'code', layout: 'client2' })}`;
+export function buildLoginURL({ redirectURI = LOGIN_REDIRECT, state } = {}) {
+  return `https://auth.gog.com/auth?${new URLSearchParams({ client_id: GALAXY_CLIENT_ID, redirect_uri: redirectURI,
+    response_type: 'code', layout: 'client2', ...(state ? { state } : {}) })}`;
+}
+export const LOGIN_URL = buildLoginURL();
 
 export class GogAPI {
   constructor({ fetchImpl = globalThis.fetch, timeoutMs = 15_000 } = {}) {
@@ -13,13 +17,13 @@ export class GogAPI {
     this.timeoutMs = timeoutMs;
   }
 
-  async request(url, { token, body, empty = false } = {}) {
+  async request(url, { token, body, empty = false, signal } = {}) {
     let response;
     try {
       response = await this.fetch(url, {
         method: body === undefined ? 'GET' : 'POST',
         redirect: 'error',
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(this.timeoutMs)]) : AbortSignal.timeout(this.timeoutMs),
         headers: { Accept: 'application/json', 'User-Agent': 'gog-achievements-cli/0.1.0',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
@@ -49,10 +53,10 @@ export class GogAPI {
     }
   }
 
-  async authorize(parameters) {
+  async authorize(parameters, { signal } = {}) {
     const url = new URL('https://auth.gog.com/token');
     url.search = new URLSearchParams({ client_id: GALAXY_CLIENT_ID, client_secret: GALAXY_CLIENT_SECRET, ...parameters }).toString();
-    const data = await this.request(url.href);
+    const data = await this.request(url.href, { signal });
     requireValue(typeof data?.access_token === 'string' && data.access_token &&
       typeof data.refresh_token === 'string' && data.refresh_token &&
       Number.isFinite(Number(data.expires_in)) && Number(data.expires_in) > 0,
@@ -61,8 +65,8 @@ export class GogAPI {
       user_id: id(data.user_id, 'User ID'), expires_at: Date.now() + Number(data.expires_in) * 1000 };
   }
 
-  exchangeCode(code) {
-    return this.authorize({ grant_type: 'authorization_code', redirect_uri: LOGIN_REDIRECT, code });
+  exchangeCode(code, redirectURI = LOGIN_REDIRECT, { signal } = {}) {
+    return this.authorize({ grant_type: 'authorization_code', redirect_uri: redirectURI, code }, { signal });
   }
 
   refresh(refreshToken, game) {
