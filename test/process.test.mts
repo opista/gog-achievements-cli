@@ -2,9 +2,10 @@ import { gogError } from './assertions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runProcess } from '../src/process.mjs';
+import { spawnFixtureProcess } from './process-fixture.mjs';
 
 const node = (code: string, input = '', options?: import('../src/types.mjs').ProcessOptions) =>
-  runProcess(process.execPath, ['-e', code], input, options);
+  runProcess(process.execPath, ['-e', code], input, { spawnImpl: spawnFixtureProcess, ...options });
 
 void test('native processes capture private stdout and discard stderr', async () => {
   const result = await node(

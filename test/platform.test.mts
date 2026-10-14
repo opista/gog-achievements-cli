@@ -7,6 +7,7 @@ import { credentialVault, MacKeychain, WindowsVault, runProcess } from '../src/k
 import { nativeHelperPath } from '../src/assets.mjs';
 import { runCLI } from '../src/cli.mjs';
 import { fixture } from './fixture.mjs';
+import { spawnFixtureProcess } from './process-fixture.mjs';
 
 void test('each supported platform selects its own credential store and helper', () => {
   assert.ok(credentialVault({ platform: 'darwin' }) instanceof MacKeychain);
@@ -158,7 +159,10 @@ void test('Mac background credential calls do not prompt and sign-in permission 
 void test('a blocked native process is killed at the process deadline', async () => {
   const started = Date.now();
   await assert.rejects(
-    runProcess(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], '', { timeoutMs: 50 }),
+    runProcess(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], '', {
+      timeoutMs: 50,
+      spawnImpl: spawnFixtureProcess,
+    }),
     (error) => gogError(error).code === 'PROCESS_TIMEOUT',
   );
   assert.ok(Date.now() - started < 2000);
