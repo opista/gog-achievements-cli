@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const execute = promisify(execFile);
+const PACKAGE_OPERATION_TIMEOUT_MS = 120_000;
 const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run npm run verify:package.');
 const directory = await mkdtemp(join(tmpdir(), 'gog-source-package-'));
@@ -14,10 +15,11 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 try {
   const cache = join(directory, 'cache');
   const options = { cwd: root, timeout: 30000, maxBuffer: 1_000_000 };
+  const packageOptions = { ...options, timeout: PACKAGE_OPERATION_TIMEOUT_MS };
   const packed = await execute(
     process.execPath,
     [npm, 'pack', '--ignore-scripts', '--json', '--pack-destination', directory, '--cache', cache],
-    options,
+    packageOptions,
   );
   const metadata = /** @type {unknown} */ (JSON.parse(packed.stdout));
   assert.ok(Array.isArray(metadata) && metadata.length === 1);
@@ -33,13 +35,14 @@ try {
       '--omit=dev',
       '--no-audit',
       '--no-fund',
+      '--offline',
       '--prefix',
       directory,
       '--cache',
       cache,
       archive,
     ],
-    options,
+    packageOptions,
   );
   const installed = join(directory, 'node_modules', 'gog-achievements-cli');
   await access(join(installed, '.build/typescript/src/index.d.mts'));
