@@ -9,11 +9,24 @@
       "draft": true,
       "force-tag-creation": true,
       "changelog-sections": [
-        { "type": "feat", "section": "Added" },
-        { "type": "fix", "section": "Fixed" },
-        { "type": "perf", "section": "Changed" },
-        { "type": "refactor", "section": "Changed" }
+        {
+          "type": "feat",
+          "section": "Added"
+        },
+        {
+          "type": "fix",
+          "section": "Fixed"
+        },
+        {
+          "type": "perf",
+          "section": "Changed"
+        },
+        {
+          "type": "refactor",
+          "section": "Changed"
+        }
       ]
     }
-  }
+  },
+  "always-update": true
 }

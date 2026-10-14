@@ -73,8 +73,13 @@ async function buildMac() {
   }
 }
 
-async function verifyHelper(helper) {
-  for (const command of ['--self-test', '--vault-self-test']) {
+async function verifyHelper(helper, platform) {
+  const commands = [
+    '--self-test',
+    '--vault-self-test',
+    ...(platform === 'win32' ? ['--browser-self-test'] : []),
+  ];
+  for (const command of commands) {
     const result = await execute(helper, [command], { timeout: 10000 });
     const outcome = JSON.parse(result.stdout);
     if (!outcome.self_test_passed) throw new Error(`Native ${command} failed.`);
@@ -93,7 +98,7 @@ export async function buildNative({
   }
   await mkdir('native/bin', { recursive: true });
   const helper = platform === 'win32' ? await buildWindows(architecture, dotnet) : await buildMac();
-  if (runSelfTest) await verifyHelper(helper);
+  if (runSelfTest) await verifyHelper(helper, platform);
   return helper;
 }
 

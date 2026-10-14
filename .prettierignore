@@ -7,3 +7,7 @@ native/windows-tests/obj/
 .build/
 dist/
 licenses/
+
+# Release Please owns these generated files.
+CHANGELOG.md
+.release-please-manifest.json

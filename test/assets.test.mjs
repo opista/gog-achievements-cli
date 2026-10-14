@@ -40,6 +40,7 @@ test('a corrupt cached helper is repaired and temporary files are removed', (t) 
   const path = cacheNativeHelper(bytes, root, 'gog-login');
   chmodSync(path, 0o600);
   writeFileSync(path, 'corrupted');
+  chmodSync(path, 0o500);
   assert.equal(cacheNativeHelper(bytes, root, 'gog-login'), path);
   assert.deepEqual(readFileSync(path), bytes);
   assert.deepEqual(readdirSync(dirname(path)), ['gog-login']);

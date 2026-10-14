@@ -18,6 +18,15 @@ internal static class Program
                 var selfTest = LoginProtocol.SelfTest();
                 return Emit(selfTest, (bool)selfTest["self_test_passed"]! ? 0 : 1);
             }
+            if (args.SequenceEqual(["--browser-self-test"]))
+            {
+                try
+                {
+                    var available = !string.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString());
+                    return Emit(new { self_test_passed = available, checks = 1 }, available ? 0 : 7);
+                }
+                catch { return Emit(Error("WEBVIEW2_MISSING"), 7); }
+            }
             if (args.SequenceEqual(["--clipboard"])) { Console.Write(Clipboard.GetText(TextDataFormat.UnicodeText)); return 0; }
             if (args.SequenceEqual(["--vault-self-test"])) return Emit(Vault.SelfTest());
             var vault = args.SequenceEqual(["--vault"]);

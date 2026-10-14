@@ -42,6 +42,8 @@ export function cacheNativeHelper(bytes, root, filename) {
       valid = stat.isFile() && !stat.isSymbolicLink() && digest(readFileSync(path)) === checksum;
     } catch {}
     if (!valid) {
+      // Windows cannot replace a read-only cached executable with rename.
+      if (process.platform === 'win32') rmSync(path, { force: true });
       const temporary = join(directory, `${randomUUID()}.tmp`);
       try {
         writeFileSync(temporary, bytes, { flag: 'wx', mode: 0o500 });

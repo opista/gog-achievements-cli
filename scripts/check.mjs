@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 
 for (const directory of ['src', 'bin', 'scripts', 'test']) {
@@ -15,3 +15,8 @@ for (const directory of ['src', 'bin', 'scripts', 'test']) {
   }
 }
 process.stdout.write('Syntax checks passed.\n');
+
+for (const name of (await readdir('.')).filter((name) => name.endsWith('.json'))) {
+  JSON.parse(await readFile(name, 'utf8'));
+}
+process.stdout.write('JSON checks passed.\n');

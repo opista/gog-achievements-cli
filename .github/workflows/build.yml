@@ -49,6 +49,22 @@ jobs:
       - run: npm run check
       - run: npm run test:coverage
       - run: dotnet run --project native/windows-tests/Gog.Login.Tests.csproj --configuration Release
+      - name: Install WebView2 runtime for native tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'MicrosoftEdgeWebView2Setup.exe'
+          Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $installer -TimeoutSec 30
+          $signature = Get-AuthenticodeSignature $installer
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+            throw 'The WebView2 installer must have a valid Microsoft signature.'
+          }
+          $install = Start-Process -FilePath $installer -ArgumentList '/silent', '/install' -PassThru
+          if (-not $install.WaitForExit(120000)) {
+            $install.Kill()
+            throw 'WebView2 installation timed out.'
+          }
+          if ($install.ExitCode -ne 0) { throw 'WebView2 installation failed.' }
       - run: npm run build
       - uses: actions/upload-artifact@v6
         with:
