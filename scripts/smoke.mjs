@@ -35,7 +35,8 @@ try {
     options,
   );
   assert.deepEqual(JSON.parse(result.stdout).data, queue);
-  const status = await execute(executable, ['doctor', '--json'], options);
+  // The first vault check also extracts and verifies the bundled native helper.
+  const status = await execute(executable, ['doctor', '--json'], { ...options, timeout: 30000 });
   assert.equal(status.stderr, '');
   const diagnosis = JSON.parse(status.stdout).data;
   assert.equal(diagnosis.supported, true);
