@@ -52,7 +52,7 @@ export function fixture(
   const calls: { url: URL; init: FetchOptions }[] = [];
   const writes: {
     achievement_id: string;
-    body: { date_unlocked: string };
+    body: { date_unlocked: string | null };
     authorization: string | undefined;
   }[] = [];
   const achievements: {
@@ -134,8 +134,8 @@ export function fixture(
       const achievementID = parsed.pathname.split('/').at(-1)!;
       assert.equal(typeof init.body, 'string');
       const body = fields(JSON.parse(init.body as string));
-      assert.equal(typeof body.date_unlocked, 'string');
-      const writeBody = { date_unlocked: body.date_unlocked as string };
+      assert.ok(body.date_unlocked === null || typeof body.date_unlocked === 'string');
+      const writeBody = { date_unlocked: body.date_unlocked };
       writes.push({
         achievement_id: achievementID,
         body: writeBody,

@@ -127,7 +127,7 @@ function help(data: HelpData, width: number) {
     paragraph(
       data.commands.length === 1
         ? data.commands[0]!.description
-        : 'Restore GOG achievements you already earned.',
+        : 'Restore earned GOG achievements or re-lock selected achievements.',
       width,
     ),
     '',
@@ -272,20 +272,32 @@ function queue(
   file: string | undefined,
   width: number,
 ) {
+  const actions = data.items.some((item) => item.action !== undefined);
   return [
     `${QUEUE_ACTIONS[command] ?? 'Queue'}: ${text(data.game.title)}`,
     ...(file ? [`File: ${text(file)}`] : []),
     `Game ID: ${text(data.game.id)}`,
     `${data.items.length} queued ${data.items.length === 1 ? 'achievement' : 'achievements'}`,
+    ...(actions
+      ? [
+          `${data.items.filter((item) => item.action !== 'lock').length} to unlock, ${data.items.filter((item) => item.action === 'lock').length} to lock`,
+        ]
+      : []),
     '',
     data.items.length
       ? table(
           [
+            ...(actions ? [{ label: 'Action' }] : []),
             { label: 'Achievement ID' },
             { label: 'Achievement', wrap: true, min: 14 },
-            { label: 'Unlock at (UTC)' },
+            { label: actions ? 'Unlock / previous date (UTC)' : 'Unlock at (UTC)' },
           ],
-          data.items.map((item) => [item.achievement_id, item.name, date(item.unlocked_at)]),
+          data.items.map((item) => [
+            ...(actions ? [item.action === 'lock' ? 'Lock' : 'Unlock'] : []),
+            item.achievement_id,
+            item.name,
+            date(item.action === 'lock' ? item.previous_unlocked_at : item.unlocked_at),
+          ]),
           width,
         )
       : 'The queue is empty.',
@@ -299,6 +311,8 @@ const STATUSES = {
   restored: 'Restored',
   skipped_already_unlocked: 'Already unlocked; skipped',
   restored_with_different_date: 'Restored with a different date',
+  locked: 'Locked',
+  skipped_already_locked: 'Already locked; skipped',
   failed: 'Failed',
   unconfirmed: 'Unconfirmed',
   not_attempted: 'Not attempted',
@@ -311,15 +325,31 @@ function report(data: RestorationReport, width: number) {
       width,
     ),
     `Game ID: ${text(data.game.id)}`,
+    ...(data.results.some((item) => item.action !== undefined)
+      ? [
+          `Requested: ${data.results.filter((item) => item.action !== 'lock').length} unlock, ${data.results.filter((item) => item.action === 'lock').length} lock`,
+        ]
+      : []),
     ...(data.dry_run ? ['Preview only. No achievements were changed.'] : []),
     '',
   ];
   for (const item of data.results) {
     lines.push(
-      paragraph(`${STATUSES[item.status] ?? item.status}: ${item.name}`, width),
+      paragraph(
+        `${item.action === 'lock' && item.status === 'pending' ? 'Would lock' : (STATUSES[item.status] ?? item.status)}: ${item.name}`,
+        width,
+      ),
       `  ID: ${text(item.achievement_id)}`,
-      `  Requested (UTC): ${date(item.requested_unlocked_at)}`,
-      `  Actual (UTC):    ${date(item.actual_unlocked_at)}`,
+      ...(item.action === 'lock'
+        ? [
+            '  Action: Lock',
+            `  Previous unlock (UTC): ${date(item.previous_unlocked_at)}`,
+            `  Actual: ${['locked', 'skipped_already_locked'].includes(item.status) ? 'Locked' : item.actual_unlocked_at ? `Unlocked ${date(item.actual_unlocked_at)} UTC` : 'Unknown'}`,
+          ]
+        : [
+            `  Requested (UTC): ${date(item.requested_unlocked_at)}`,
+            `  Actual (UTC):    ${date(item.actual_unlocked_at)}`,
+          ]),
       ...(item.error_code ? [`  Error: ${text(item.error_code)}`] : []),
       '',
     );

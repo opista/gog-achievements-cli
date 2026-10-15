@@ -17,6 +17,9 @@ import type {
   Game,
   QueueItem,
   RestorationReport,
+  AchievementAction,
+  LockQueueItem,
+  LockResult,
 } from '../domain/model.mjs';
 import { GogError, requireValue } from '../domain/errors.mjs';
 import { errorCode } from '../domain/objects.mjs';
@@ -27,6 +30,7 @@ import {
   queueSelection,
   removeItems,
   dateItems,
+  validateAction,
 } from '../domain/queue.mjs';
 import { restorationPlan } from '../domain/restoration.mjs';
 import { buildLoginURL } from './oauth.mjs';
@@ -136,9 +140,13 @@ export class AchievementService {
     achievementIDs: readonly unknown[],
     unlockedAt: unknown,
     achievements: readonly Achievement[],
+    action?: AchievementAction,
   ): Queue {
-    const date = timestamp(unlockedAt ?? defaultTimestamp(this.now()), this.now());
-    const items = appendItems(queue, achievementIDs, date, achievements);
+    const date =
+      action === 'lock'
+        ? undefined
+        : timestamp(unlockedAt ?? defaultTimestamp(this.now()), this.now());
+    const items = appendItems(queue, achievementIDs, date, achievements, action);
     return validateQueue({ ...queue, items, updated_at: defaultTimestamp(this.now()) }, this.now());
   }
 
@@ -146,7 +154,9 @@ export class AchievementService {
     gameID: unknown,
     achievementIDs: readonly unknown[] = [],
     unlockedAt?: unknown,
+    action?: unknown,
   ): Promise<Queue> {
+    const selectedAction = validateAction(action, unlockedAt);
     if (unlockedAt !== undefined) timestamp(unlockedAt, this.now());
     achievementIDs.forEach((value) => id(value, 'Achievement ID'));
     const { session, game, achievements } = await this.context(gameID);
@@ -158,19 +168,21 @@ export class AchievementService {
       updated_at: defaultTimestamp(this.now()),
       items: [],
     };
-    return this.addItems(queue, achievementIDs, unlockedAt, achievements);
+    return this.addItems(queue, achievementIDs, unlockedAt, achievements, selectedAction);
   }
 
   async addToQueue(
     input: unknown,
     achievementIDs: readonly unknown[],
     unlockedAt?: unknown,
+    action?: unknown,
   ): Promise<Queue> {
+    const selectedAction = validateAction(action, unlockedAt);
     const queue = validateQueue(input, this.now());
     if (unlockedAt !== undefined) timestamp(unlockedAt, this.now());
     const context = await this.context(queue.game.id);
     this.assertQueueAccount(queue, context);
-    return this.addItems(queue, achievementIDs, unlockedAt, context.achievements);
+    return this.addItems(queue, achievementIDs, unlockedAt, context.achievements, selectedAction);
   }
 
   editQueue(
@@ -218,6 +230,11 @@ export class AchievementService {
     queued: QueueItem,
     result: RestorationResult,
   ): Promise<RestorationResult> {
+    if (queued.action === 'lock') {
+      requireValue(result.action === 'lock', 'INVALID_QUEUE', 'The queue action changed.');
+      return this.lockAchievement(game, session, queued, result);
+    }
+    requireValue(result.action !== 'lock', 'INVALID_QUEUE', 'The queue action changed.');
     let attempted = false;
     try {
       // Re-read before each write. GOG has no atomic compare/set operation.
@@ -269,6 +286,67 @@ export class AchievementService {
     }
   }
 
+  async lockAchievement(
+    game: Game,
+    session: Session,
+    queued: LockQueueItem,
+    result: LockResult,
+  ): Promise<LockResult> {
+    let attempted = false;
+    let actualUnlockedAt = result.actual_unlocked_at;
+    try {
+      const latest = await this.readAchievement(game, session, queued.achievement_id);
+      if (latest) actualUnlockedAt = latest.unlocked_at;
+      requireValue(
+        latest && latest.key === queued.key,
+        'ACHIEVEMENT_CHANGED',
+        'The achievement changed before the write.',
+        5,
+      );
+      if (!latest.unlocked)
+        return { ...result, status: 'skipped_already_locked', actual_unlocked_at: null };
+      requireValue(
+        Date.parse(latest.unlocked_at) === Date.parse(queued.previous_unlocked_at),
+        'ACHIEVEMENT_CHANGED',
+        'The unlock date changed. Remove this lock request and review it again.',
+        5,
+      );
+      attempted = true;
+      let writeError: unknown;
+      try {
+        await this.api.lock(game, session, queued.achievement_id);
+      } catch (error) {
+        writeError = error;
+      }
+      // Reconcile a lost response with reads only. Never repeat the lock POST.
+      let verified: Achievement | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt) await this.wait(500 * attempt);
+        verified = await this.readAchievement(game, session, queued.achievement_id);
+        if (verified && verified.key === queued.key && !verified.unlocked) break;
+      }
+      const observed = { ...result, actual_unlocked_at: verified?.unlocked_at ?? null };
+      if (verified && verified.key === queued.key && !verified.unlocked)
+        return { ...observed, status: 'locked' };
+      return {
+        ...observed,
+        status:
+          verified?.key === queued.key &&
+          ['API_REJECTED', 'AUTH_REJECTED'].some((code) => code === errorCode(writeError))
+            ? 'failed'
+            : 'unconfirmed',
+        error_code: writeError instanceof GogError ? writeError.code : 'LOCK_NOT_CONFIRMED',
+      };
+    } catch (error) {
+      return {
+        ...result,
+        actual_unlocked_at: actualUnlockedAt,
+        status: attempted ? 'unconfirmed' : 'not_attempted',
+        error_code: error instanceof GogError ? error.code : 'INTERNAL_ERROR',
+      };
+    }
+  }
+
   async applyQueue(input: unknown, { dryRun = true } = {}): Promise<RestorationReport> {
     const queue = validateQueue(input, this.now());
     requireValue(
@@ -286,8 +364,7 @@ export class AchievementService {
       complete: true,
       results,
     };
-    if (dryRun || results.every((item) => item.status === 'skipped_already_unlocked'))
-      return report;
+    if (dryRun || !results.some((item) => item.status === 'pending')) return report;
 
     const scoped = validSession(
       await this.api.refresh(context.session.refresh_token, context.game),
@@ -308,7 +385,11 @@ export class AchievementService {
         result,
       );
       const status = results[index]!.status;
-      if (status !== 'restored' && status !== 'skipped_already_unlocked') {
+      if (
+        !['restored', 'skipped_already_unlocked', 'locked', 'skipped_already_locked'].includes(
+          status,
+        )
+      ) {
         report.complete = false;
         for (const remaining of results.slice(index + 1))
           if (remaining.status === 'pending') remaining.status = 'not_attempted';

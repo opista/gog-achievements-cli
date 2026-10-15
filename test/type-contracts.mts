@@ -1,4 +1,4 @@
-import type { CommandData, QueueItem } from '../src/types.mjs';
+import type { CommandData, QueueItem, LockQueueItem, LockResult } from '../src/types.mjs';
 import type { GogAPI } from '../src/api.mjs';
 import type { ParsedCommand } from '../src/cli/parse.mjs';
 import type { QueueView } from '../src/domain/queue.mjs';
@@ -12,6 +12,14 @@ export function typeContracts(api: GogAPI, item: QueueItem, games: CommandData['
   // @ts-expect-error The HTTP adapter must never accept a null unlock date.
   void api.unlock({ client_id: '1' }, { user_id: '1', access_token: 'test' }, '1', null);
   return achievements;
+}
+
+export function lockTypes() {
+  // @ts-expect-error Lock requests must capture the previous unlock date.
+  const missing: LockQueueItem = { achievement_id: '1', key: 'A', name: 'A', action: 'lock' };
+  // @ts-expect-error Lock results cannot report a restored unlock.
+  const status: LockResult['status'] = 'restored';
+  return { missing, status };
 }
 
 export function architectureTypes(queue: QueueView): ParsedCommand {

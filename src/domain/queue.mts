@@ -1,7 +1,25 @@
-import type { Queue, QueueItem, PublicGame, Achievement } from './model.mjs';
+import type { Queue, QueueItem, PublicGame, Achievement, AchievementAction } from './model.mjs';
 import { requireValue } from './errors.mjs';
 import { fields, isArray } from './objects.mjs';
 import { id, timestamp } from './values.mjs';
+
+export function validateAction(
+  value: unknown,
+  unlockedAt?: unknown,
+): AchievementAction | undefined {
+  requireValue(
+    value === undefined || value === 'unlock' || value === 'lock',
+    'INVALID_ACTION',
+    'Use --action unlock or --action lock.',
+  );
+  requireValue(
+    value !== 'lock' || unlockedAt === undefined,
+    'INVALID_ARGUMENTS',
+    'Lock requests do not accept an unlock date.',
+  );
+  return value;
+}
+
 export function validateQueue(input: unknown, now: number): Queue {
   const queue = fields(input);
   requireValue(
@@ -45,23 +63,46 @@ export function validateQueue(input: unknown, now: number): Queue {
     );
     seen.add(achievementID);
     requireValue(
-      typeof item.name === 'string' &&
-        typeof item.key === 'string' &&
-        item.key.length > 0 &&
-        Object.keys(item).every((key) =>
-          ['achievement_id', 'key', 'name', 'unlocked_at'].includes(key),
-        ),
+      typeof item.name === 'string' && typeof item.key === 'string' && item.key.length > 0,
       'INVALID_QUEUE',
       'The queue item is not valid.',
     );
-    const unlockedAt = timestamp(item.unlocked_at, now); // null is never a valid unlock request.
-    items.push({
-      ...item,
-      achievement_id: achievementID,
-      key: item.key,
-      name: item.name,
-      unlocked_at: unlockedAt,
-    });
+    requireValue(
+      item.action === undefined || item.action === 'unlock' || item.action === 'lock',
+      'INVALID_QUEUE',
+      'The queue item action must be unlock or lock.',
+    );
+    const lock = item.action === 'lock';
+    const allowed = [
+      'achievement_id',
+      'key',
+      'name',
+      'action',
+      lock ? 'previous_unlocked_at' : 'unlocked_at',
+    ];
+    requireValue(
+      Object.keys(item).every((key) => allowed.includes(key)),
+      'INVALID_QUEUE',
+      'The queue item has a field that is not valid for its action.',
+    );
+    const base = { achievement_id: achievementID, key: item.key, name: item.name };
+    if (lock) {
+      // Keep the exact server date, including its precision and offset, for the pre-write check.
+      requireValue(
+        typeof item.previous_unlocked_at === 'string' &&
+          Number.isFinite(Date.parse(item.previous_unlocked_at)),
+        'INVALID_DATE',
+        'A lock request must contain its previous unlock date.',
+      );
+      items.push({ ...base, action: 'lock', previous_unlocked_at: item.previous_unlocked_at });
+    } else {
+      const unlockedAt = timestamp(item.unlocked_at, now); // null is never a valid unlock request.
+      items.push({
+        ...base,
+        ...(item.action === 'unlock' ? { action: 'unlock' as const } : {}),
+        unlocked_at: unlockedAt,
+      });
+    }
   }
   return {
     ...queue,
@@ -80,25 +121,37 @@ export type QueueView = Readonly<Omit<Queue, 'items' | 'game'>> & {
 export function appendItems(
   queue: QueueView,
   achievementIDs: readonly unknown[],
-  date: string,
+  date: string | undefined,
   achievements: readonly Achievement[],
+  action?: AchievementAction,
 ): QueueItem[] {
   const existing = new Set(queue.items.map((item) => item.achievement_id));
   const lookup = new Map(achievements.map((item) => [item.id, item]));
-  const added = [];
+  const added: QueueItem[] = [];
   for (const value of achievementIDs) {
     const achievementID = id(value, 'Achievement ID');
     const item = lookup.get(achievementID);
     requireValue(item, 'ACHIEVEMENT_NOT_FOUND', 'The game does not have this achievement.', 5, {
       achievement_id: achievementID,
     });
-    requireValue(
-      !item.unlocked,
-      'ALREADY_UNLOCKED',
-      'This achievement is already unlocked. Its date will stay unchanged.',
-      5,
-      { achievement_id: achievementID },
-    );
+    const base = { achievement_id: achievementID, key: item.key, name: item.name };
+    let request: QueueItem;
+    if (action === 'lock') {
+      requireValue(item.unlocked, 'ALREADY_LOCKED', 'This achievement is already locked.', 5, {
+        achievement_id: achievementID,
+      });
+      request = { ...base, action: 'lock', previous_unlocked_at: item.unlocked_at };
+    } else {
+      requireValue(
+        !item.unlocked,
+        'ALREADY_UNLOCKED',
+        'This achievement is already unlocked. Its date will stay unchanged.',
+        5,
+        { achievement_id: achievementID },
+      );
+      requireValue(date !== undefined, 'INVALID_DATE', 'An unlock request needs a date.');
+      request = { ...base, ...(action ? { action } : {}), unlocked_at: date };
+    }
     requireValue(
       !existing.has(achievementID),
       'DUPLICATE_ACHIEVEMENT',
@@ -107,12 +160,7 @@ export function appendItems(
       { achievement_id: achievementID },
     );
     existing.add(achievementID);
-    added.push({
-      achievement_id: achievementID,
-      key: item.key,
-      name: item.name,
-      unlocked_at: date,
-    });
+    added.push(request);
   }
 
   return [...queue.items, ...added];
@@ -139,7 +187,14 @@ export function dateItems(
   selected: ReadonlySet<string>,
   date: string,
 ): QueueItem[] {
+  requireValue(
+    queue.items.every((item) => !selected.has(item.achievement_id) || item.action !== 'lock'),
+    'INVALID_ARGUMENTS',
+    'Lock requests do not accept an unlock date. Select only unlock requests.',
+  );
   return queue.items.map((item) =>
-    selected.has(item.achievement_id) ? { ...item, unlocked_at: date } : item,
+    selected.has(item.achievement_id) && item.action !== 'lock'
+      ? { ...item, unlocked_at: date }
+      : item,
   );
 }
