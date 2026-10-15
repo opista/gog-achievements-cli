@@ -20,6 +20,7 @@ export const FLAGS = {
   'no-open': { description: 'Show the login URL for manual sign-in.' },
   timeout: { value: 'SECONDS', description: 'Sign-in wait: 10 to 600 seconds. Default: 180.' },
   'ids-only': { description: 'Read game IDs without titles.' },
+  check: { description: 'Check for a newer CLI release without downloading or installing it.' },
   yes: { description: 'Apply queued achievements to GOG and check each result.' },
   'dry-run': {
     description: 'Preview the queue. Makes no achievement writes. This is the default.',
@@ -30,6 +31,10 @@ export const FLAGS = {
 } as const satisfies Record<string, FlagSpec>;
 
 export const COMMANDS = {
+  'self update': {
+    flags: ['check', 'yes'],
+    description: 'Check for a newer CLI release, or download and install it after confirmation.',
+  },
   'auth login': {
     flags: ['no-open', 'timeout'],
     description: 'Sign in through a native GOG window and save login securely.',
@@ -87,6 +92,7 @@ export const commandDefinitions: Record<string, CommandSpec | undefined> = COMMA
 const flagDefinitions: Record<string, FlagSpec> = FLAGS;
 
 const EXAMPLES: Record<string, string[]> = {
+  'self update': ['self update --check', 'self update', 'self update --yes --json'],
   'auth login': ['auth login', 'auth login --timeout 300'],
   'auth status': ['auth status'],
   'auth logout': ['auth logout'],
@@ -149,6 +155,9 @@ export function commandHelp(topic = ''): HelpData | null {
   ].map((name) => ({
     flag: name,
     ...flagDefinitions[name]!,
+    ...(topic === 'self update' && name === 'yes'
+      ? { description: 'Install the CLI update without an interactive confirmation.' }
+      : {}),
     required: !!spec?.required?.includes(name),
   }));
   return {

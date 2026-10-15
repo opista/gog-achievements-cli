@@ -13,12 +13,14 @@ import { runCLI } from '../src/cli.mjs';
 import { formatOutput } from '../src/output.mjs';
 import { MacKeychain } from '../src/keychain.mjs';
 import { fixture, GAME_ID, ACHIEVEMENT_ID, DATE } from './fixture.mjs';
+import { updateStub } from './update-fixture.mjs';
 
 void test('auth login waits for automatic sign-in and returns the completed login', async () => {
   const f = fixture();
   const progress: string[] = [];
   const result = successOutcome(
     await runCLI(['auth', 'login', '--timeout', '120'], {
+      updates: updateStub(),
       service: f.service,
       platform: 'darwin',
       stderr: { write: (message) => progress.push(message) },

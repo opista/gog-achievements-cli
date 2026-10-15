@@ -3,6 +3,7 @@ import type { OutputStream, NativeLoginOptions, AuthStatus } from '../applicatio
 import type { Queue, Success, PublicError } from '../domain/model.mjs';
 import type { CLIOutcome, CommandName, CommandData, OutcomeMeta } from './contracts.mjs';
 import type { AchievementService as GogAchievements } from '../application/service.mjs';
+import type { UpdatePort } from '../application/update-ports.mjs';
 import { GogError, errorResult, requireValue } from '../domain/errors.mjs';
 import { commandHelp } from './definitions.mjs';
 import { parseArguments, resolveCommand, validatedCommand } from './parse.mjs';
@@ -33,10 +34,23 @@ export interface CLIEffects {
     save: (path: string, queue: unknown, options?: { create?: boolean }) => Promise<void>;
     withLock: <T>(path: string, operation: () => Promise<T>) => Promise<T>;
   };
+  updates: UpdatePort;
+  confirm: (question: string) => Promise<boolean>;
 }
 export async function dispatchCLI(
   args: string[],
-  { service, stderr, platform, isPackaged, systemInfo, readInput, nativeLogin, files }: CLIEffects,
+  {
+    service,
+    stderr,
+    platform,
+    isPackaged,
+    systemInfo,
+    readInput,
+    nativeLogin,
+    files,
+    updates,
+    confirm,
+  }: CLIEffects,
 ): Promise<CLIOutcome> {
   let pretty = args.includes('--pretty');
   let format: 'json' | 'text' = args.includes('--json') ? 'json' : 'text';
@@ -63,7 +77,7 @@ export async function dispatchCLI(
       rawFlags.help ||
       !positionals.length ||
       positionals[0] === 'help' ||
-      ['auth', 'games', 'achievements', 'queue'].includes(topic)
+      ['auth', 'games', 'achievements', 'queue', 'self'].includes(topic)
     ) {
       const data = commandHelp(topic);
       requireValue(data, 'UNKNOWN_COMMAND', 'Unknown command. Run --help for the command list.');
@@ -73,7 +87,32 @@ export async function dispatchCLI(
     command = resolved.command;
     file = rawFlags.file;
     const { command: name, flags } = validatedCommand(command, rawFlags, resolved.spec);
-    if (name === 'auth login') {
+    if (name === 'self update') {
+      requireValue(
+        !(flags.check && flags.yes),
+        'INVALID_ARGUMENTS',
+        'Use --check or --yes, not both.',
+      );
+      const data = await updates.check();
+      if (flags.check) return success(name, data);
+      if (!data.update_available) return success(name, { ...data, updated: false });
+      requireValue(
+        data.can_update,
+        'SELF_UPDATE_UNSUPPORTED',
+        data.instructions ?? 'This installation cannot update itself.',
+        7,
+      );
+      requireValue(
+        flags.yes ||
+          (format === 'text' &&
+            (await confirm(
+              `Update gog-achievements from ${data.current_version} to ${data.latest_version}? [y/N] `,
+            ))),
+        'UPDATE_CONFIRMATION_REQUIRED',
+        'The update was not installed. Run self update --yes to confirm installation.',
+      );
+      return success(name, await updates.install());
+    } else if (name === 'auth login') {
       let data: CommandData['auth login'];
       const timeout = flags.timeout === undefined ? LOGIN_TIMEOUT_MS / 1000 : Number(flags.timeout);
       requireValue(
@@ -109,6 +148,18 @@ export async function dispatchCLI(
           timeoutMs: timeout * 1000,
           progress: (message) => stderr.write(message + '\n'),
         });
+      }
+      if (format === 'text' && data.authenticated) {
+        // A release check cannot change the successful login result or install anything.
+        try {
+          const update = await updates.check({ timeoutMs: 2000 });
+          if (update.update_available && update.can_update)
+            stderr.write(
+              `A newer version is available (${update.latest_version}).\nRun: gog-achievements self update\n`,
+            );
+        } catch {
+          /* Update notices are best effort. */
+        }
       }
       return success('auth login', data);
     } else if (name === 'auth finish' || name === 'auth import') {

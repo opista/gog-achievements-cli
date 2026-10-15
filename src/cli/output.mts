@@ -143,6 +143,7 @@ function help(data: HelpData, width: number) {
       ['Achievements', 'achievements'],
       ['Local queues', 'queue'],
       ['Checks', 'doctor'],
+      ['Updates', 'self'],
     ]) {
       const rows = data.commands
         .filter((spec) => spec.command.split(' ')[0] === prefix)
@@ -357,6 +358,19 @@ export function formatOutput(
   if (!isSuccess(outcome)) return `${failure(outcome.result.error, width)}\n`;
   let body: string;
   switch (outcome.command) {
+    case 'self update': {
+      const data = outcome.result.data;
+      body =
+        'updated' in data && data.updated
+          ? `Updated gog-achievements from ${text(data.previous_version ?? data.current_version)} to ${text(data.latest_version)}.\nPrevious tool files: ${text(data.backup_directory)}`
+          : `Installed version: ${text(data.current_version)}\nLatest version: ${text(data.latest_version)}\n` +
+            (data.update_available
+              ? data.can_update
+                ? 'Run: gog-achievements self update'
+                : text(data.instructions)
+              : 'The installed CLI is up to date.');
+      break;
+    }
     case 'help':
       body = help(outcome.result.data, width);
       break;

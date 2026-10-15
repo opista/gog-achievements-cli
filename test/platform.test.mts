@@ -7,6 +7,7 @@ import { credentialVault, MacKeychain, WindowsVault, runProcess } from '../src/k
 import { nativeHelperPath } from '../src/assets.mjs';
 import { runCLI } from '../src/cli.mjs';
 import { fixture } from './fixture.mjs';
+import { updateStub } from './update-fixture.mjs';
 import { spawnFixtureProcess } from './process-fixture.mjs';
 
 void test('each supported platform selects its own credential store and helper', () => {
@@ -25,6 +26,7 @@ void test('Windows login completes in one command and doctor supports Windows', 
   f.vault.storage = 'windows_dpapi';
   const result = successOutcome(
     await runCLI(['auth', 'login'], {
+      updates: updateStub(),
       service: f.service,
       platform: 'win32',
       nativeLogin: async (options) => {

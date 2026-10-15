@@ -18,6 +18,7 @@ The CLI shows readable text by default. Every command also supports JSON for scr
 | Inspect a saved queue without network access.                              | `queue show`                                        |
 | Preview changes, apply them, and check each result against GOG.            | `queue apply --dry-run`, `queue apply --yes`        |
 | Check local support and saved login availability.                          | `doctor`                                            |
+| Check for a new CLI release and install it manually.                       | `self update --check`, `self update`                |
 | Discover command options and get structured output.                        | `--help`, `--json`, `--json --pretty`               |
 
 ## Install
@@ -48,6 +49,27 @@ Run the executable from that folder:
 **Command convention:** examples below use `gog-achievements` on PATH. Without PATH setup, use `./gog-achievements` on macOS or `.\gog-achievements.exe` on Windows.
 
 Windows sign-in requires the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/). The CLI gives an install instruction if it is missing. Mac executables use ad hoc signing; Windows executables are unsigned. Apple notarization and trusted code signing are not configured.
+
+## Update the CLI
+
+For a standalone release package, run:
+
+```sh
+gog-achievements self update --check
+gog-achievements self update
+```
+
+The first command checks the latest stable release. The second asks for confirmation, downloads the package for your computer, verifies its SHA-256 checksum, and tests the new executable before and after replacement. It updates the tool files, including the Intel Mac runtime, and keeps the previous files in a backup folder. Queue files and saved login stay unchanged.
+
+Scripts and agents must explicitly confirm installation:
+
+```sh
+gog-achievements self update --yes --json
+```
+
+Successful `auth login` in text mode also makes a short update check and can print a notice to stderr. A failed or slow check does not change the login result. JSON login calls do not check for updates. There are no daily checks, background checks or automatic installations.
+
+Source and package manager installations use their original update method. The desktop app manages its bundled CLI. These installations can use `self update --check`, but cannot replace themselves. See [update recovery](https://github.com/opista/gog-achievements-cli/blob/main/docs/cli-reference.md#cli-updates-and-recovery) if an update is interrupted.
 
 ## Quick start
 

@@ -6,6 +6,7 @@ import type {
   DoctorResult,
 } from '../application/ports.mjs';
 import type { Queue, RestorationReport, Success, Failure } from '../domain/model.mjs';
+import type { UpdateCheck, UpdateResult } from '../application/update-ports.mjs';
 export interface FlagSpec {
   value?: string;
   multiple?: boolean;
@@ -48,6 +49,7 @@ export interface CommandData {
   'queue show': Queue;
   'queue apply': RestorationReport;
   doctor: DoctorResult;
+  'self update': UpdateCheck | UpdateResult;
 }
 
 export type CommandName = Exclude<keyof CommandData, 'help'>;

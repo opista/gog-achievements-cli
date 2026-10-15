@@ -6,6 +6,7 @@ import type { runCLI } from '../src/cli.mjs';
 import type { formatOutput } from '../src/output.mjs';
 import type { fixture } from './fixture.mjs';
 import type { CLIOutcome } from '../src/types.mjs';
+import { updateStub } from './update-fixture.mjs';
 
 interface Runtime {
   runCLI: typeof runCLI;
@@ -36,6 +37,7 @@ export async function captureContracts(runtime: Runtime): Promise<unknown> {
   try {
     async function record(label: string, args: string[], f = runtime.fixture(), file?: string) {
       const outcome: CLIOutcome = await runtime.runCLI(args, {
+        updates: updateStub(),
         service: f.service,
         stdin: Readable.from([args[1] === 'import' ? 'fixture-refresh' : 'fixture-code']),
         platform: 'darwin',

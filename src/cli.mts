@@ -15,6 +15,9 @@ import { readStdin, readClipboard } from './adapters/input.mjs';
 import { withLoginSignals } from './adapters/native/login-lifecycle.mjs';
 import { dispatchCLI } from './cli/handlers.mjs';
 import type { CLIService } from './cli/handlers.mjs';
+import type { UpdatePort } from './application/update-ports.mjs';
+import { CLIUpdater } from './adapters/updates/updater.mjs';
+import { confirmUpdate } from './adapters/updates/confirmation.mjs';
 export { HELP } from './cli/definitions.mjs';
 export type { CLIService } from './cli/handlers.mjs';
 export interface CLIOptions {
@@ -24,6 +27,8 @@ export interface CLIOptions {
   execute?: ProcessRunner;
   platform?: string;
   nativeLogin?: (options: NativeLoginOptions & { service: CLIService }) => Promise<AuthStatus>;
+  updates?: UpdatePort;
+  confirm?: (question: string) => Promise<boolean>;
 }
 export async function runCLI(
   args: string[],
@@ -34,6 +39,8 @@ export async function runCLI(
     execute = runProcess,
     platform = process.platform,
     nativeLogin = loginWithNativeWindow,
+    updates = new CLIUpdater(),
+    confirm = (question) => confirmUpdate(question, stdin, stderr),
   }: CLIOptions = {},
 ): Promise<CLIOutcome> {
   return dispatchCLI(args, {
@@ -43,6 +50,8 @@ export async function runCLI(
     isPackaged,
     systemInfo: () => ({ node: process.versions.node, architecture: process.arch }),
     files: { read: readQueue, save: saveQueue, withLock: withQueueLock },
+    updates,
+    confirm,
     readInput: (mode) =>
       mode === 'clipboard' ? readClipboard(platform, execute, nativeHelperPath) : readStdin(stdin),
     nativeLogin: (options) => withLoginSignals((signal) => nativeLogin({ ...options, signal })),
