@@ -47,7 +47,7 @@ export type ParsedCommand = {
   };
 }[CommandName];
 export function resolveCommand(topic: string) {
-  const spec = commandDefinitions[topic];
+  const spec = Object.hasOwn(commandDefinitions, topic) ? commandDefinitions[topic] : undefined;
   requireValue(spec, 'UNKNOWN_COMMAND', 'Unknown command. Run --help for the command list.');
   return { command: topic as CommandName, spec };
 }
