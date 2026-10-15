@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/opista/gog-achievements-cli/compare/v0.4.0...v0.5.0) (2026-10-15)
+
+
+### Added
+
+* support mixed achievement unlock and lock queues ([#9](https://github.com/opista/gog-achievements-cli/issues/9)) ([7af1829](https://github.com/opista/gog-achievements-cli/commit/7af18290b79cda2389ec3a62e2a045210d0cd560))
+
 ## [0.4.0](https://github.com/opista/gog-achievements-cli/compare/v0.3.0...v0.4.0) (2026-10-15)
 
 
