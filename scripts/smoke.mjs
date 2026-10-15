@@ -18,6 +18,11 @@ try {
   const help = await execute(executable, ['--help', '--json'], { ...options, timeout: 30000 });
   assert.equal(help.stderr, '');
   assert.equal(JSON.parse(help.stdout).data.name, 'gog-achievements');
+  const updateHelp = await execute(executable, ['self', 'update', '--help', '--json'], options);
+  const updateCommand = JSON.parse(updateHelp.stdout).data.commands[0];
+  assert.equal(updateHelp.stderr, '');
+  assert.equal(updateCommand.command, 'self update');
+  assert.deepEqual(updateCommand.flags, ['check', 'yes']);
   const readable = await execute(executable, ['achievements', 'list', '--help'], options);
   assert.match(readable.stdout, /--game GAME_ID/);
   const queue = {
@@ -50,7 +55,7 @@ try {
     assert.equal(JSON.parse(String(error.stdout)).error.code, 'UNKNOWN_COMMAND');
   }
   process.stdout.write(
-    'Standalone smoke checks passed (help, offline queue, bounded credential probe, JSON errors).\n',
+    'Standalone smoke checks passed (help, update commands, offline queue, bounded credential probe, JSON errors).\n',
   );
   if (!diagnosis.credentials_available)
     process.stdout.write(

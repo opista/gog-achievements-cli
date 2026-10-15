@@ -96,7 +96,7 @@ async function createArchive(folder, folderName, platform) {
   const archive = resolve('dist', `${folderName}.zip`);
   await rm(archive, { force: true });
   if (platform === 'darwin')
-    await execute('/usr/bin/ditto', ['-c', '-k', '--keepParent', folder, archive], {
+    await execute('/usr/bin/ditto', ['-c', '-k', '--norsrc', '--keepParent', folder, archive], {
       timeout: 30000,
     });
   else {
@@ -186,6 +186,14 @@ async function main() {
   });
   process.stdout.write(smoke.stdout);
   const archive = await createArchive(folder, folderName, platform);
+  // Self updates select stable releases; keep development prerelease builds supported.
+  if (/^\d+\.\d+\.\d+$/.test(version)) {
+    const updateSmoke = await execute(process.execPath, ['scripts/smoke-update.mjs', archive], {
+      timeout: 90000,
+      maxBuffer: 1_000_000,
+    });
+    process.stdout.write(updateSmoke.stdout);
+  }
   process.stdout.write(`Built ${executable}\nArchive: ${archive}\n`);
 }
 

@@ -22,12 +22,31 @@ All commands accept `--json`, `--pretty` and `--help` (`-h`). Flags in the requi
 | `queue show`        | `--file PATH`                                                | None                                          |
 | `queue apply`       | `--file PATH`                                                | `--dry-run` or `--yes`                        |
 | `doctor`            | None                                                         | None                                          |
+| `self update`       | None                                                         | `--check` or `--yes`                          |
 
 Repeat `--achievement` to select more than one ID. `games list --search` requires titles and cannot be combined with `--ids-only`. `auth login --no-open` cannot be combined with `--timeout`. `queue apply --yes` cannot be combined with `--dry-run`.
 
 `games list` reads all library pages. `--ids-only` uses the owned-ID endpoint without titles. `achievements list` checks ownership and includes hidden entries. Its text output shows names, full IDs, lock status and UTC dates; JSON also includes descriptions and other fields.
 
 Use the installed executable's `--help --json` output to discover its command contract. Source users can run `node bin/gog-achievements.mjs --help --json`.
+
+## CLI updates and recovery
+
+`self update --check` reads public GitHub release metadata and reports `current_version`, `latest_version`, `update_available`, `release_url` and `can_update`. If the installation cannot replace itself, `instructions` describes the supported update method. It does not download a release archive, change files or require GOG sign-in.
+
+`self update` uses only the latest stable published release for the current OS and architecture. It never downgrades. When an update is available, interactive text mode asks for confirmation. Use `--yes` to install from a script or JSON call. `--check` and `--yes` cannot be combined. A declined confirmation returns `UPDATE_CONFIRMATION_REQUIRED` with exit 2.
+
+Installation requires a complete standalone package with its original executable name and write access to its folder. Source and package manager installations must use their original update method. A CLI bundled in the desktop app must be updated through that app.
+
+Downloads have time and size limits. The updater verifies the published SHA-256 checksum, rejects unsafe archive paths and links, validates the package version and platform, and runs the new executable's JSON help command before and after replacement. SHA-256 detects changed bytes; it is not a publisher signature. Releases do not yet have trusted signing or notarization.
+
+Only tool-owned files are replaced. Credentials and queue files stay unchanged. The previous files remain in the reported `backup_directory`; successful JSON output includes `updated: true`, `previous_version`, and the new `current_version`. When no newer version is available, it reports `updated: false`. Windows renames the running executable into the backup and keeps it there; no detached updater or scheduled work is used. You can remove old backup folders after you have confirmed that the new version works and the update command has exited.
+
+An installation failure attempts to restore the previous files. If that fails, `UPDATE_RECOVERY_REQUIRED` (exit 7) includes the backup location. Restore the backup's tool files into the original package folder before another update. Keep your queue files in place.
+
+The file `.gog-achievements-update.lock` prevents concurrent updates. A forced shutdown can leave it behind. Read it for the backup location, make sure no update is running, restore any moved tool files from that backup, and then remove the lock. Do not remove another running updater's lock.
+
+Successful automatic `auth login` in text mode checks once, with a two-second network limit. It prints a notice to stderr only if a newer release is available and this standalone installation can update itself. Update errors do not change the login result. JSON login, manual login URL generation, other commands and help do not trigger a check. There are no daily or background checks, cached checks, automatic downloads or automatic installations.
 
 ## Authentication
 
