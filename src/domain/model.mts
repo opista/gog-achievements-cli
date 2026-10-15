@@ -30,12 +30,27 @@ interface AchievementData {
 export type Achievement = AchievementData &
   ({ unlocked: false; unlocked_at: null } | { unlocked: true; unlocked_at: string });
 
-export interface QueueItem {
+export type AchievementAction = 'unlock' | 'lock';
+
+interface QueueItemData {
   achievement_id: string;
   key: string;
   name: string;
-  unlocked_at: string;
 }
+
+export interface UnlockQueueItem extends QueueItemData {
+  action?: 'unlock';
+  unlocked_at: string;
+  previous_unlocked_at?: never;
+}
+
+export interface LockQueueItem extends QueueItemData {
+  action: 'lock';
+  previous_unlocked_at: string;
+  unlocked_at?: never;
+}
+
+export type QueueItem = UnlockQueueItem | LockQueueItem;
 
 export interface Queue {
   schema_version: 1;
@@ -51,19 +66,37 @@ export type RestorationStatus =
   | 'restored'
   | 'skipped_already_unlocked'
   | 'restored_with_different_date'
+  | 'locked'
+  | 'skipped_already_locked'
   | 'failed'
   | 'unconfirmed'
   | 'not_attempted';
 
-export interface RestorationResult {
+interface ResultData {
   achievement_id: string;
   name: string;
-  requested_unlocked_at: string;
   previous_unlocked_at: string | null;
   actual_unlocked_at: string | null;
-  status: RestorationStatus;
   error_code?: string;
 }
+
+export interface UnlockResult extends ResultData {
+  action?: 'unlock';
+  requested_unlocked_at: string;
+  status: Exclude<RestorationStatus, 'locked' | 'skipped_already_locked'>;
+}
+
+export interface LockResult extends ResultData {
+  action: 'lock';
+  requested_unlocked_at: null;
+  previous_unlocked_at: string;
+  status: Exclude<
+    RestorationStatus,
+    'restored' | 'skipped_already_unlocked' | 'restored_with_different_date'
+  >;
+}
+
+export type RestorationResult = UnlockResult | LockResult;
 
 export interface RestorationReport {
   dry_run: boolean;

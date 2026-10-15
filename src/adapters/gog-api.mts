@@ -339,4 +339,15 @@ export class GogAPI {
       { token: session.access_token, body: { date_unlocked: date }, empty: true },
     );
   }
+
+  async lock(
+    game: Pick<Game, 'client_id'>,
+    session: Pick<Session, 'user_id' | 'access_token'>,
+    achievementID: string,
+  ) {
+    return this.request(
+      `https://gameplay.gog.com/clients/${id(game.client_id)}/users/${id(session.user_id)}/achievements/${id(achievementID)}`,
+      { token: session.access_token, body: { date_unlocked: null }, empty: true },
+    );
+  }
 }

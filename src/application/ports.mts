@@ -45,6 +45,11 @@ export interface GogAPIPort {
     id: string,
     date: string,
   ): Promise<unknown>;
+  lock(
+    game: Pick<Game, 'client_id'>,
+    session: Pick<Session, 'user_id' | 'access_token'>,
+    id: string,
+  ): Promise<unknown>;
 }
 
 export interface Context {

@@ -1,6 +1,6 @@
 # Project instructions
 
-- This project is a standalone CLI for macOS and Windows for restoring earned GOG achievements.
+- This project is a standalone CLI for macOS and Windows for restoring earned GOG achievements and explicitly re-locking selected achievements.
 - Use Node 22 or later. Release executables bundle Node and native helpers; runtime packages are not required. Use Node 24 LTS for release builds.
 - Keep `src/application/service.mts` independent of CLI parsing and output formatting. Domain modules are pure; receive time as an argument. Application modules receive external operations through ports. Adapters implement those ports; root facades supply production defaults. ESLint enforces these boundaries. External applications consume the CLI through its JSON contract; do not add application-specific plans or dependencies here.
 - Commands show readable text by default. Use `--json` for one compact JSON object on stdout; add `--pretty` for indentation. Preserve string IDs, error codes, exit codes and queue schema version 1. In text mode, errors go to stderr.
@@ -8,8 +8,8 @@
 - GOG rejects custom loopback redirects for the Galaxy OAuth client. Keep the exact registered redirect URL when opening sign-in and exchanging the code.
 - `auth login` must complete sign-in in one command. Always close its helper window after success, cancellation, timeout or failure. Keep progress on stderr and the final result on stdout.
 - Queue creation and edits make no achievement writes. Apply previews by default; `--yes` is required for writes.
-- Validate the entire queue, account and game before any write. Never send a null unlock date.
-- Preserve existing unlocks. Do not add reset or relock commands without an explicit request.
+- Validate the entire queue, account and game before any write. Unlock requests must never send a null date. Only an explicit lock request may send `date_unlocked: null`.
+- Preserve existing unlocks unless the user explicitly selects them for locking. Lock requests capture the original unlock date and stop if it changes. Do not add statistics resets or account-wide resets without an explicit request.
 - Tests use fixtures and local HTTP servers. Do not make automated achievement writes against a real account.
 - Run `npm run check` and `npm run test:coverage` after code changes. Do not repeat checks without a new change or failure.
 - Run `npm run build` for the current OS and Node architecture, or `npm run build -- --target TARGET` to select it explicitly. The target must match the OS and running Node architecture; reject mismatches before file changes. Preserve other targets' output. After native changes, build and run the callback self-test. Mac helpers are universal; Windows helpers use the selected architecture. Do not claim Windows behavior is verified from a Mac compilation alone.
@@ -22,6 +22,6 @@
 
 Use `node bin/gog-achievements.mjs --help --json` for command details. Read `README.md` before login or apply.
 Use `--json` for AI and script calls. Start with `doctor` and `auth status`. A human must complete browser sign-in locally.
-Use `games list`, then `achievements list`. Queue only achievements the user says they earned.
+Use `games list`, then `achievements list`. Queue unlocks only for achievements the user says they earned. Queue locks only for unlocked achievements the user explicitly selects.
 Show the queue and a dry run before applying selected changes within the user's authorization.
 Inspect each apply result. Exit 6 means partial or unconfirmed results, not a completed batch.

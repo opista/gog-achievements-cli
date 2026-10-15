@@ -215,6 +215,7 @@ export async function dispatchCLI(
           flags.game,
           flags.achievement ?? [],
           flags['unlocked-at'],
+          flags.action,
         );
         await files.save(flags.file, created, { create: true });
         return created;
@@ -242,7 +243,7 @@ export async function dispatchCLI(
         const queue = await files.read(flags.file);
         const updated =
           name === 'queue add'
-            ? await service.addToQueue(queue, flags.achievement, flags['unlocked-at'])
+            ? await service.addToQueue(queue, flags.achievement, flags['unlocked-at'], flags.action)
             : service.editQueue(queue, flags.achievement, {
                 remove: name === 'queue remove',
                 unlockedAt: flags['unlocked-at'],

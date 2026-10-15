@@ -6,25 +6,27 @@ Use the [README](../README.md) for installation, examples and the LLM agent work
 
 All commands accept `--json`, `--pretty` and `--help` (`-h`). Flags in the required column must be supplied. `auth finish` requires exactly one input source; `auth import` requires `--stdin`.
 
-| Command             | Required flags                                               | Optional flags                                |
-| ------------------- | ------------------------------------------------------------ | --------------------------------------------- |
-| `auth login`        | None                                                         | `--no-open`, `--timeout SECONDS`              |
-| `auth status`       | None                                                         | None                                          |
-| `auth logout`       | None                                                         | None                                          |
-| `auth finish`       | `--stdin` or `--clipboard`                                   | None                                          |
-| `auth import`       | `--stdin`                                                    | None                                          |
-| `games list`        | None                                                         | `--search TEXT` or `--ids-only`               |
-| `achievements list` | `--game GAME_ID`                                             | None                                          |
-| `queue create`      | `--game GAME_ID`, `--file PATH`                              | `--achievement ID`, `--unlocked-at TIMESTAMP` |
-| `queue add`         | `--file PATH`, `--achievement ID`                            | `--unlocked-at TIMESTAMP`                     |
-| `queue remove`      | `--file PATH`, `--achievement ID`                            | None                                          |
-| `queue set-date`    | `--file PATH`, `--achievement ID`, `--unlocked-at TIMESTAMP` | None                                          |
-| `queue show`        | `--file PATH`                                                | None                                          |
-| `queue apply`       | `--file PATH`                                                | `--dry-run` or `--yes`                        |
-| `doctor`            | None                                                         | None                                          |
-| `self update`       | None                                                         | `--check` or `--yes`                          |
+| Command             | Required flags                                               | Optional flags                                                         |
+| ------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `auth login`        | None                                                         | `--no-open`, `--timeout SECONDS`                                       |
+| `auth status`       | None                                                         | None                                                                   |
+| `auth logout`       | None                                                         | None                                                                   |
+| `auth finish`       | `--stdin` or `--clipboard`                                   | None                                                                   |
+| `auth import`       | `--stdin`                                                    | None                                                                   |
+| `games list`        | None                                                         | `--search TEXT` or `--ids-only`                                        |
+| `achievements list` | `--game GAME_ID`                                             | None                                                                   |
+| `queue create`      | `--game GAME_ID`, `--file PATH`                              | `--achievement ID`, `--unlocked-at TIMESTAMP`, `--action unlock\|lock` |
+| `queue add`         | `--file PATH`, `--achievement ID`                            | `--unlocked-at TIMESTAMP`, `--action unlock\|lock`                     |
+| `queue remove`      | `--file PATH`, `--achievement ID`                            | None                                                                   |
+| `queue set-date`    | `--file PATH`, `--achievement ID`, `--unlocked-at TIMESTAMP` | None                                                                   |
+| `queue show`        | `--file PATH`                                                | None                                                                   |
+| `queue apply`       | `--file PATH`                                                | `--dry-run` or `--yes`                                                 |
+| `doctor`            | None                                                         | None                                                                   |
+| `self update`       | None                                                         | `--check` or `--yes`                                                   |
 
 Repeat `--achievement` to select more than one ID. `games list --search` requires titles and cannot be combined with `--ids-only`. `auth login --no-open` cannot be combined with `--timeout`. `queue apply --yes` cannot be combined with `--dry-run`.
+
+`queue create` and `queue add` use `--action unlock` by default. Use `--action lock` to capture currently unlocked achievements and their original dates. All IDs in that command use the same action. Add another action in a separate `queue add` call to build a mixed queue. `--action lock` cannot be combined with `--unlocked-at`. `queue set-date` rejects its entire selection if any selected entry is a lock.
 
 `games list` reads all library pages. `--ids-only` uses the owned-ID endpoint without titles. `achievements list` checks ownership and includes hidden entries. Its text output shows names, full IDs, lock status and UTC dates; JSON also includes descriptions and other fields.
 
@@ -110,17 +112,35 @@ A queue uses schema version 1. The following IDs are illustrative; use the IDs r
 }
 ```
 
-All IDs must be positive decimal strings. A queue can hold up to 1,000 achievements. Unknown fields, duplicate achievements, invalid dates and null dates are rejected. Each requested `unlocked_at` must be an RFC 3339 timestamp with an explicit time zone, at or before the current time. Dates are normalised to UTC at second precision. Creation and addition default to ten seconds before that operation.
+All IDs must be positive decimal strings. A queue can hold up to 1,000 achievements. An achievement can occur only once, even with different actions. Unknown fields, unknown actions, invalid dates and null unlock dates are rejected. Each requested `unlocked_at` must be an RFC 3339 timestamp with an explicit time zone, at or before the current time. Dates are normalised to UTC at second precision. Unlock creation and addition default to ten seconds before that operation.
+
+An item without `action` retains its existing meaning: unlock with the given date. Explicit unlock entries add `"action": "unlock"`. Lock entries contain `"action": "lock"` and a non-null `previous_unlocked_at` copied exactly from GOG, including its offset and precision. Lock entries must omit `unlocked_at`; unlock entries must omit `previous_unlocked_at`. The version remains `1`. Existing default unlock commands keep their original JSON shape. Older CLI and desktop consumers reject lock entries, so callers must use a CLI release with `--action` in its JSON help.
+
+For example, a second item in the queue above could be:
+
+```json
+{
+  "achievement_id": "100000000000000004",
+  "key": "OTHER_ACH_KEY",
+  "name": "Achievement to lock",
+  "action": "lock",
+  "previous_unlocked_at": "2026-09-01T12:00:00+0000"
+}
+```
 
 Create refuses to overwrite an existing file. Queue operations that change the file or apply it hold a `<queue path>.lock` for the complete operation, including remote apply requests. If a process is killed and leaves a lock, check the PID recorded in it. Remove the lock only after confirming that process is no longer active. `queue show` only reads the file and needs no network access.
 
 ### Apply behaviour
 
-Apply previews unless `--yes` is supplied. Before any write, the CLI validates the entire queue, signed-in account, game ownership and current achievement keys. It uses game-scoped authentication and reads each achievement again before writing. Existing unlocks are preserved.
+Apply previews unless `--yes` is supplied. Before any write, the CLI validates the entire queue, signed-in account, game ownership, current achievement keys and original dates for pending locks. It uses game-scoped authentication and reads each achievement again before writing. Unlock requests preserve existing unlocks. Lock requests skip already locked entries. If a selected achievement is still unlocked but its date differs from `previous_unlocked_at`, apply stops with `ACHIEVEMENT_CHANGED`; remove and re-add that lock request to review the current date.
 
 After each write, it reads the achievement state back. If the write response is lost, it reconciles the result with reads and does not repeat the POST automatically. A failure, unconfirmed result or returned date mismatch stops further writes. The queue file remains available for review. See the README's [item statuses and exit codes](../README.md#apply-results); incomplete reports use exit 6 and `error.details.report` in JSON mode.
 
-A retry skips achievements that are now unlocked. It cannot correct their dates. Keep the game closed during apply because the API has no atomic compare-and-set operation.
+A retry skips achievements already in their requested state. It cannot correct an existing unlock's date. The CLI applies entries in queue order; a partial batch keeps earlier confirmed changes and does not roll them back. The saved queue remains unchanged after apply, including original dates. Capture the JSON result if you also need a saved per-item report.
+
+Lock reports contain `action: "lock"`, `requested_unlocked_at: null`, the saved `previous_unlocked_at`, and the observed `actual_unlocked_at`. Status `locked` requires a fresh, explicit locked state for the same achievement ID and key. `skipped_already_locked` confirms that no write was needed. A missing achievement, read failure or success response without a confirmed state is not a confirmed lock. An observed null date in an `unconfirmed` result is not proof of success.
+
+Keep the game closed during apply because the API has no atomic compare-and-set operation. Clearing platform achievements does not reset saves or game statistics. Later game activity or pending Galaxy synchronization may unlock them again.
 
 ## Time limits and output
 
@@ -140,10 +160,11 @@ The CLI rejects redirects on API requests. Errors do not print raw server bodies
 
 ## Protocol references
 
-The CLI uses unofficial GOG web endpoints and GOGDB build metadata. These can change independently of the CLI. It supports the `date_unlocked` field used in the referenced achievement requests and checks the date returned by GOG. Server date limits remain unverified through a real account write.
+The CLI uses unofficial GOG web endpoints and GOGDB build metadata. These can change independently of the CLI. It supports the `date_unlocked` field used in the referenced achievement requests and checks the state returned by GOG. Only the explicit lock adapter sends `date_unlocked: null`; the unlock adapter still rejects null dates. Server date limits, live re-lock behavior and Galaxy display refresh remain unverified through a real account write.
 
 - [GOG account and authentication API notes](https://github.com/Yepoleb/gogapidocs)
 - [timendum's achievement requests](https://github.com/timendum/gog_achievements/blob/master/internal/gog.go)
+- [GOG SDK clearing achievements](https://docs.gog.com/sdk-stats-and-achievements/#clearing-achievements)
 - [Heroic's GOG authentication](https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/auth.py)
 
 This project has its own implementation; it does not copy the upstream app source.

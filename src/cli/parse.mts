@@ -2,6 +2,7 @@ import type { CommandName, CommandSpec } from './contracts.mjs';
 import { parseArgs } from 'node:util';
 import { GogError, requireValue } from '../domain/errors.mjs';
 import { id } from '../domain/values.mjs';
+import { validateAction } from '../domain/queue.mjs';
 import { COMMANDS, FLAGS, commandDefinitions } from './definitions.mjs';
 // Flag types and help text share one definition.
 const ARGUMENT_OPTIONS = Object.fromEntries(
@@ -71,6 +72,7 @@ export function validatedCommand(
   );
   if (flags.game) id(flags.game, 'Game ID');
   for (const value of flags.achievement ?? []) id(value, 'Achievement ID');
+  validateAction(flags.action, flags['unlocked-at']);
 
   // The same command definitions establish the required flag fields above.
   return { command, flags } as ParsedCommand;

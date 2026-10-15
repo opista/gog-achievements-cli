@@ -11,6 +11,11 @@ export const FLAGS = {
     multiple: true,
     description: 'Select an achievement. Repeat for more than one.',
   },
+  action: {
+    value: 'unlock|lock',
+    description:
+      'Action for the selected achievements. Default: unlock. Lock saves the current unlock date.',
+  },
   'unlocked-at': {
     value: 'TIMESTAMP',
     description: 'Unlock date in RFC 3339 with a time zone. Cannot be in the future.',
@@ -56,14 +61,15 @@ export const COMMANDS = {
     description: 'List achievements and their unlock dates for an owned game.',
   },
   'queue create': {
-    flags: ['file', 'game', 'achievement', 'unlocked-at'],
+    flags: ['file', 'game', 'achievement', 'unlocked-at', 'action'],
     required: ['file', 'game'],
     description: 'Create a local queue. Achievement flags can be repeated.',
   },
   'queue add': {
-    flags: ['file', 'achievement', 'unlocked-at'],
+    flags: ['file', 'achievement', 'unlocked-at', 'action'],
     required: ['file', 'achievement'],
-    description: 'Add locked achievements to a local queue.',
+    description:
+      'Add achievements to a local queue. Use --action lock to re-lock unlocked achievements.',
   },
   'queue remove': {
     flags: ['file', 'achievement'],
@@ -107,7 +113,10 @@ const EXAMPLES: Record<string, string[]> = {
     'queue create --game GAME_ID --file queue.json',
     'queue create --game GAME_ID --file queue.json --achievement ACHIEVEMENT_ID',
   ],
-  'queue add': ['queue add --file queue.json --achievement ACHIEVEMENT_ID'],
+  'queue add': [
+    'queue add --file queue.json --achievement ACHIEVEMENT_ID',
+    'queue add --file queue.json --achievement ACHIEVEMENT_ID --action lock',
+  ],
   'queue remove': ['queue remove --file queue.json --achievement ACHIEVEMENT_ID'],
   'queue set-date': [
     'queue set-date --file queue.json --achievement ACHIEVEMENT_ID --unlocked-at 2026-10-01T18:30:00+01:00',
