@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/opista/gog-achievements-cli/compare/v0.5.0...v0.5.1) (2026-10-17)
+
+
+### Fixed
+
+* show and scale the Windows sign-in window ([15a9457](https://github.com/opista/gog-achievements-cli/commit/15a9457d6ca9ad070bdcd5e0ef623d1f6c450c04))
+
 ## [0.5.0](https://github.com/opista/gog-achievements-cli/compare/v0.4.0...v0.5.0) (2026-10-15)
 
 
