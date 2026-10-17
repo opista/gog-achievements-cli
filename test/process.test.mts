@@ -15,6 +15,15 @@ void test('native processes capture private stdout and discard stderr', async ()
   assert.deepEqual(result, { code: 0, stdout: 'fixture-secret' });
 });
 
+void test('background native processes keep Windows window hiding enabled', async () => {
+  await node('', '', {
+    spawnImpl: (file, args, options) => {
+      assert.equal(options.windowsHide, true);
+      return spawnFixtureProcess(file, args, options);
+    },
+  });
+});
+
 void test('native output limits count UTF-8 bytes and expose no returned data', async () => {
   await assert.rejects(
     node("process.stdout.write('é'.repeat(150));", '', { maxOutputBytes: 200 }),

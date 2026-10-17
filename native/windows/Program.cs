@@ -85,15 +85,36 @@ internal sealed class LoginWindow : Form
     {
         this.config = config;
         this.folder = folder;
+        SuspendLayout();
+        AutoScaleDimensions = new System.Drawing.SizeF(96, 96);
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "Sign in to GOG";
         ClientSize = new System.Drawing.Size(560, 720);
         StartPosition = FormStartPosition.CenterScreen;
         Controls.Add(view);
+        ResumeLayout(false);
         timeout = new() { Interval = config.TimeoutMs };
         timeout.Tick += (_, _) => Finish(Program.Error("AUTH_TIMEOUT"));
-        Shown += async (_, _) => await Start();
+        Shown += async (_, _) => { FitToWorkingArea(); await Start(); };
         FormClosing += (_, _) => { timeout.Stop(); Result ??= Program.Error("AUTH_CANCELLED"); };
         FormClosed += (_, _) => { view.Dispose(); timeout.Dispose(); };
+    }
+
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        FitToWorkingArea();
+    }
+
+    private void FitToWorkingArea()
+    {
+        var area = Screen.FromControl(this).WorkingArea;
+        var width = Math.Min(Width, area.Width);
+        var height = Math.Min(Height, area.Height);
+        Bounds = new System.Drawing.Rectangle(
+            Math.Clamp(Left, area.Left, area.Right - width),
+            Math.Clamp(Top, area.Top, area.Bottom - height),
+            width, height);
     }
 
     private void Finish(object result)
