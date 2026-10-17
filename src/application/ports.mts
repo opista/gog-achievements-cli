@@ -110,6 +110,7 @@ export type SpawnProcess = (
 export interface ProcessOptions extends SignalOptions {
   timeoutMs?: number;
   maxOutputBytes?: number;
+  windowsHide?: boolean;
   spawnImpl?: SpawnProcess | undefined;
 }
 

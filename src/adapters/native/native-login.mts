@@ -50,6 +50,8 @@ export async function runNativeHelper(
     result = await execute(helperPath ?? nativeHelperPath(platform), [], JSON.stringify(config), {
       timeoutMs: config.timeout_ms + 5000,
       maxOutputBytes: 16_000,
+      // On Windows, hiding a process also hides its first GUI window.
+      windowsHide: platform !== 'win32',
       signal,
       spawnImpl,
     });

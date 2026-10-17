@@ -87,25 +87,30 @@ function fakeChild() {
   return child;
 }
 
-void test('native IPC captures private stdout, ignores diagnostics and uses no credential arguments', async () => {
-  const result = await runNativeHelper(
-    { login_url: 'public-login-url', state: 'test-state', timeout_ms: 1000 },
-    {
-      spawnImpl: (file, args) => {
-        assert.match(file, /native[\\/]bin[\\/]gog-login(?:\.exe)?$/);
-        assert.deepEqual(args, []);
-        const child = fakeChild();
-        queueMicrotask(() => {
-          child.stderr.end('secret-URL must not be forwarded');
-          child.stdout.end(JSON.stringify({ type: 'code', code: 'test-secret-code' }));
-          child.emit('close', 0);
-        });
-        return child;
+for (const platform of ['win32', 'darwin']) {
+  void test(`native ${platform} sign-in keeps its window visible and its IPC private`, async () => {
+    const result = await runNativeHelper(
+      { login_url: 'public-login-url', state: 'test-state', timeout_ms: 1000 },
+      {
+        platform,
+        spawnImpl: (file, args, options) => {
+          assert.match(file, /native[\\/]bin[\\/]gog-login(?:\.exe)?$/);
+          assert.deepEqual(args, []);
+          assert.equal(options.windowsHide, platform !== 'win32');
+          assert.deepEqual(options.stdio, ['pipe', 'pipe', 'pipe']);
+          const child = fakeChild();
+          queueMicrotask(() => {
+            child.stderr.end('secret-URL must not be forwarded');
+            child.stdout.end(JSON.stringify({ type: 'code', code: 'test-secret-code' }));
+            child.emit('close', 0);
+          });
+          return child;
+        },
       },
-    },
-  );
-  assert.equal(fields(result).code, 'test-secret-code');
-});
+    );
+    assert.equal(fields(result).code, 'test-secret-code');
+  });
+}
 
 void test('cancelling a pending native window kills the helper process', async () => {
   const abort = new AbortController();

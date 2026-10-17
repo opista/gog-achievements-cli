@@ -8,14 +8,20 @@ export async function runProcess(
   command: string,
   args: string[],
   input = '',
-  { timeoutMs = 5000, maxOutputBytes = 128_000, signal, spawnImpl = spawn }: ProcessOptions = {},
+  {
+    timeoutMs = 5000,
+    maxOutputBytes = 128_000,
+    windowsHide = true,
+    signal,
+    spawnImpl = spawn,
+  }: ProcessOptions = {},
 ): Promise<ProcessResult> {
   if (signal?.aborted)
     throw new GogError('PROCESS_CANCELLED', 'The native command was cancelled.', 7);
   return new Promise<ProcessResult>((resolve, reject) => {
     let child: ReturnType<NonNullable<ProcessOptions['spawnImpl']>>;
     try {
-      child = spawnImpl(command, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+      child = spawnImpl(command, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide });
     } catch {
       reject(new GogError('PROCESS_FAILED', 'Cannot start a required native command.', 7));
       return;

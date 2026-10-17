@@ -11,7 +11,7 @@ import { BUILD_HELP, parseBuildArguments, selectBuildTarget } from './build-targ
 
 const execute = promisify(execFile);
 const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
-// Bundled Node/.NET compression exceeded 30 seconds on the Windows x64 runner.
+// Bundled Node/.NET compression can exceed 30 seconds on Windows.
 const WINDOWS_ARCHIVE_TIMEOUT_MS = 120000;
 
 /** @param {string} executable @param {string} bundle @param {string} staging @param {string} helper @param {string} platform */
@@ -100,16 +100,11 @@ async function createArchive(folder, folderName, platform) {
       timeout: 30000,
     });
   else {
-    const quote = (/** @type {string} */ value) => `'${value.replaceAll("'", "''")}'`;
+    // Windows PowerShell Compress-Archive can store backslash paths, which
+    // strict ZIP readers reject. The built-in tar writes standard ZIP paths.
     await execute(
-      'powershell.exe',
-      [
-        '-NoLogo',
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        `Compress-Archive -LiteralPath ${quote(folder)} -DestinationPath ${quote(archive)}`,
-      ],
+      'tar.exe',
+      ['--format', 'zip', '-c', '-f', archive, '-C', dirname(folder), folderName],
       { timeout: WINDOWS_ARCHIVE_TIMEOUT_MS },
     );
   }

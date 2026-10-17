@@ -83,5 +83,6 @@ try {
     'Packaged update smoke passed (running executable replacement, full package verification, backup and queue preservation).\n',
   );
 } finally {
-  await rm(directory, { recursive: true, force: true });
+  // Windows can retain an executable handle briefly after its process exits.
+  await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 }
