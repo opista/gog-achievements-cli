@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/opista/gog-achievements-cli/compare/v0.5.1...v0.6.0) (2026-10-18)
+
+
+### Added
+
+* add achievement search and status filters ([#13](https://github.com/opista/gog-achievements-cli/issues/13)) ([cab3ee1](https://github.com/opista/gog-achievements-cli/commit/cab3ee1773e66cc406c47042226a891398b689ff))
+* export achievements as CSV ([#14](https://github.com/opista/gog-achievements-cli/issues/14)) ([cd60e9e](https://github.com/opista/gog-achievements-cli/commit/cd60e9e64fc82b8b818ab0327a37ef759ae6a1bc))
+
 ## [0.5.1](https://github.com/opista/gog-achievements-cli/compare/v0.5.0...v0.5.1) (2026-10-17)
 
 

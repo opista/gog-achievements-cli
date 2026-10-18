@@ -1,6 +1,6 @@
 {
   "name": "gog-achievements-cli",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "GOG achievement restoration for macOS and Windows, with JSON commands and saved queues",
   "type": "module",
   "private": true,
