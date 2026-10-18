@@ -160,6 +160,7 @@ void test('invalid actions and dates fail before service or file operations', as
           files: { read: unexpected, save: unexpected, withLock: unexpected },
           updates: { check: unexpected, install: unexpected },
           confirm: unexpected,
+          writeExport: unexpected,
         },
       );
       assert.equal(result.exitCode, 2);

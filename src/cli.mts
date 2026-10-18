@@ -18,6 +18,7 @@ import type { CLIService } from './cli/handlers.mjs';
 import type { UpdatePort } from './application/update-ports.mjs';
 import { CLIUpdater } from './adapters/updates/updater.mjs';
 import { confirmUpdate } from './adapters/updates/confirmation.mjs';
+import { writeExportFile } from './adapters/export-files.mjs';
 export { HELP } from './cli/definitions.mjs';
 export type { CLIService } from './cli/handlers.mjs';
 export interface CLIOptions {
@@ -52,6 +53,7 @@ export async function runCLI(
     files: { read: readQueue, save: saveQueue, withLock: withQueueLock },
     updates,
     confirm,
+    writeExport: writeExportFile,
     readInput: (mode) =>
       mode === 'clipboard' ? readClipboard(platform, execute, nativeHelperPath) : readStdin(stdin),
     nativeLogin: (options) => withLoginSignals((signal) => nativeLogin({ ...options, signal })),

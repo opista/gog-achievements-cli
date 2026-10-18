@@ -42,6 +42,7 @@ export interface CommandData {
   'auth import': AuthStatus;
   'games list': GamesResult;
   'achievements list': AchievementsResult;
+  'achievements export': { path: string; count: number };
   'queue create': Queue;
   'queue add': Queue;
   'queue remove': Queue;

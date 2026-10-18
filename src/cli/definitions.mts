@@ -4,7 +4,7 @@ import { VERSION } from '../version.mjs';
 
 export const FLAGS = {
   game: { value: 'GAME_ID', description: 'GOG game ID from games list.' },
-  file: { value: 'PATH', description: 'Local queue file.' },
+  file: { value: 'PATH', description: 'Local queue or CSV export file.' },
   search: {
     value: 'TEXT',
     description: 'Find games by title or achievements by name or description.',
@@ -67,6 +67,11 @@ export const COMMANDS = {
     required: ['game'],
     description: 'List achievements and their unlock dates for an owned game.',
   },
+  'achievements export': {
+    flags: ['game', 'file', 'search', 'status'],
+    required: ['game', 'file'],
+    description: 'Export achievements to a new UTF-8 CSV file.',
+  },
   'queue create': {
     flags: ['file', 'game', 'achievement', 'unlocked-at', 'action'],
     required: ['file', 'game'],
@@ -116,6 +121,10 @@ const EXAMPLES: Record<string, string[]> = {
     'achievements list --game 1423049311',
     'achievements list --game 1423049311 --search city --status locked --json',
     'achievements list --game 1423049311 --json --pretty',
+  ],
+  'achievements export': [
+    'achievements export --game 1423049311 --file achievements.csv',
+    'achievements export --game 1423049311 --file locked.csv --search story --status locked --json',
   ],
   'queue create': [
     'queue create --game GAME_ID --file queue.json',

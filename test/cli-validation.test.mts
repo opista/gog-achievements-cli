@@ -17,6 +17,7 @@ void test('unknown and inherited command names fail before external operations',
         nativeLogin: unexpected,
         updates: { check: unexpected, install: unexpected },
         confirm: unexpected,
+        writeExport: unexpected,
         files: { read: unexpected, save: unexpected, withLock: unexpected },
       });
       assert.equal(outcome.exitCode, 2, command);
