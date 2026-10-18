@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,6 +35,13 @@ async function buildWindows(architecture, dotnet) {
 async function buildMac() {
   const temporary = await mkdtemp(join(tmpdir(), 'gog-native-build-'));
   try {
+    const cases = await readFile('native/login-protocol-cases.json');
+    const fixtures = join(temporary, 'LoginProtocolCases.swift');
+    await writeFile(fixtures, `let loginProtocolCasesBase64 = "${cases.toString('base64')}"\n`);
+    const sources = (await readdir('native/macos'))
+      .filter((name) => name.endsWith('.swift'))
+      .sort()
+      .map((name) => join('native/macos', name));
     process.stdout.write('Building universal Mac sign-in helper...\n');
     for (const target of ['arm64', 'x86_64']) {
       await execute(
@@ -55,6 +62,8 @@ async function buildMac() {
           '-framework',
           'Security',
           'native/gog-login.swift',
+          ...sources,
+          fixtures,
           '-o',
           join(temporary, target),
         ],

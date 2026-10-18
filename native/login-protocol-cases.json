@@ -1,0 +1,376 @@
+{
+  "navigation": [
+    {
+      "name": "auth",
+      "url": "https://auth.gog.com/auth",
+      "main_frame": true,
+      "allowed": true
+    },
+    {
+      "name": "login",
+      "url": "https://login.gog.com/auth",
+      "main_frame": true,
+      "allowed": true
+    },
+    {
+      "name": "embed",
+      "url": "https://embed.gog.com/",
+      "main_frame": true,
+      "allowed": true
+    },
+    {
+      "name": "www",
+      "url": "https://www.gog.com/",
+      "main_frame": true,
+      "allowed": true
+    },
+    {
+      "name": "untrusted-main",
+      "url": "https://attacker.example/",
+      "main_frame": true,
+      "allowed": false
+    },
+    {
+      "name": "challenge-main",
+      "url": "https://challenges.cloudflare.com/",
+      "main_frame": true,
+      "allowed": false
+    },
+    {
+      "name": "challenge-frame",
+      "url": "https://challenges.cloudflare.com/",
+      "main_frame": false,
+      "allowed": true
+    },
+    {
+      "name": "blank-main",
+      "url": "about:blank",
+      "main_frame": true,
+      "allowed": true
+    },
+    {
+      "name": "blank-frame",
+      "url": "about:blank",
+      "main_frame": false,
+      "allowed": true
+    },
+    {
+      "name": "srcdoc-main",
+      "url": "about:srcdoc",
+      "main_frame": true,
+      "allowed": false
+    },
+    {
+      "name": "srcdoc-frame",
+      "url": "about:srcdoc",
+      "main_frame": false,
+      "allowed": true
+    },
+    {
+      "name": "srcdoc-fragment",
+      "url": "about:srcdoc#other",
+      "main_frame": false,
+      "allowed": false
+    },
+    {
+      "name": "blank-query",
+      "url": "about:blank?other",
+      "main_frame": false,
+      "allowed": false
+    },
+    {
+      "name": "http-main",
+      "url": "http://auth.gog.com/auth",
+      "main_frame": true,
+      "allowed": false
+    },
+    {
+      "name": "http-frame",
+      "url": "http://challenges.cloudflare.com/",
+      "main_frame": false,
+      "allowed": false
+    },
+    {
+      "name": "file",
+      "url": "file:///tmp/login.html",
+      "main_frame": false,
+      "allowed": false
+    },
+    {
+      "name": "javascript",
+      "url": "javascript:void(0)",
+      "main_frame": false,
+      "allowed": false
+    },
+    {
+      "name": "data",
+      "url": "data:text/html,login",
+      "main_frame": false,
+      "allowed": false
+    },
+    {
+      "name": "user-info-main",
+      "url": "https://user@auth.gog.com/auth",
+      "main_frame": true,
+      "allowed": false
+    },
+    {
+      "name": "password-main",
+      "url": "https://user:password@auth.gog.com/auth",
+      "main_frame": true,
+      "allowed": false
+    }
+  ],
+  "callbacks": [
+    {
+      "name": "with-state",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=test-code&state=test-state",
+      "expected_state": "test-state",
+      "expected": {
+        "code": "test-code",
+        "state": "test-state",
+        "error": null
+      }
+    },
+    {
+      "name": "without-state",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=test-code",
+      "expected_state": "test-state",
+      "expected": {
+        "code": "test-code",
+        "state": null,
+        "error": null
+      }
+    },
+    {
+      "name": "wrong-state",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=test-code&state=wrong",
+      "expected_state": "test-state",
+      "expected": {
+        "code": null,
+        "state": null,
+        "error": "INVALID_LOGIN_STATE"
+      }
+    },
+    {
+      "name": "duplicate-state",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=test-code&state=test-state&state=test-state",
+      "expected_state": "test-state",
+      "expected": {
+        "code": null,
+        "state": null,
+        "error": "INVALID_LOGIN_STATE"
+      }
+    },
+    {
+      "name": "duplicate-code",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=one&code=two",
+      "expected_state": "test-state",
+      "expected": {
+        "code": null,
+        "state": null,
+        "error": "INVALID_LOGIN_CODE"
+      }
+    },
+    {
+      "name": "untrusted-host",
+      "url": "https://attacker.example/on_login_success?code=test-code",
+      "expected_state": "test-state",
+      "expected": null
+    },
+    {
+      "name": "http",
+      "url": "http://embed.gog.com/on_login_success?code=test-code",
+      "expected_state": "test-state",
+      "expected": null
+    },
+    {
+      "name": "explicit-port",
+      "url": "https://embed.gog.com:443/on_login_success?code=test-code",
+      "expected_state": "test-state",
+      "expected": null
+    },
+    {
+      "name": "user-info",
+      "url": "https://user@embed.gog.com/on_login_success?code=test-code",
+      "expected_state": "test-state",
+      "expected": null
+    },
+    {
+      "name": "cancelled",
+      "url": "https://embed.gog.com/on_login_success?origin=client&error=access_denied",
+      "expected_state": "test-state",
+      "expected": {
+        "code": null,
+        "state": null,
+        "error": "AUTH_CANCELLED"
+      }
+    },
+    {
+      "name": "newline",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=line%0Abreak",
+      "expected_state": "test-state",
+      "expected": {
+        "code": null,
+        "state": null,
+        "error": "INVALID_LOGIN_CODE"
+      }
+    },
+    {
+      "name": "trailing-newline",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=test-code%0A",
+      "expected_state": "test-state",
+      "expected": {
+        "code": null,
+        "state": null,
+        "error": "INVALID_LOGIN_CODE"
+      }
+    },
+    {
+      "name": "encoded-plus",
+      "url": "https://embed.gog.com/on_login_success?origin=client&code=a%2Bb",
+      "expected_state": "test-state",
+      "expected": {
+        "code": "a+b",
+        "state": null,
+        "error": null
+      }
+    },
+    {
+      "name": "double-slash",
+      "url": "https://embed.gog.com//on_login_success?code=test-code",
+      "expected_state": "test-state",
+      "expected": null
+    },
+    {
+      "name": "missing-code",
+      "url": "https://embed.gog.com/on_login_success?origin=client",
+      "expected_state": "test-state",
+      "expected": {
+        "code": null,
+        "state": null,
+        "error": "INVALID_LOGIN_CODE"
+      }
+    },
+    {
+      "name": "www-callback",
+      "url": "https://www.gog.com/on_login_success/?code=test-code",
+      "expected_state": "test-state",
+      "expected": {
+        "code": "test-code",
+        "state": null,
+        "error": null
+      }
+    }
+  ],
+  "configs": [
+    {
+      "name": "valid",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 1000
+      },
+      "valid": true
+    },
+    {
+      "name": "wrong-state",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "wrong",
+        "timeout_ms": 1000
+      },
+      "valid": false
+    },
+    {
+      "name": "zero-timeout",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 0
+      },
+      "valid": false
+    },
+    {
+      "name": "large-timeout",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 600001
+      },
+      "valid": false
+    },
+    {
+      "name": "duplicate-state",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 1000
+      },
+      "valid": false
+    },
+    {
+      "name": "duplicate-redirect",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state&redirect_uri=other",
+        "state": "test-state",
+        "timeout_ms": 1000
+      },
+      "valid": false
+    },
+    {
+      "name": "wrong-host",
+      "input": {
+        "login_url": "https://attacker.example/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 1000
+      },
+      "valid": false
+    },
+    {
+      "name": "user-info",
+      "input": {
+        "login_url": "https://user@auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 1000
+      },
+      "valid": false
+    },
+    {
+      "name": "explicit-port",
+      "input": {
+        "login_url": "https://auth.gog.com:443/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 1000
+      },
+      "valid": false
+    },
+    {
+      "name": "fractional-timeout",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": 1.5
+      },
+      "valid": false
+    },
+    {
+      "name": "boolean-timeout",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": "test-state",
+        "timeout_ms": true
+      },
+      "valid": false
+    },
+    {
+      "name": "missing-state",
+      "input": {
+        "login_url": "https://auth.gog.com/auth?redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&state=test-state",
+        "state": null,
+        "timeout_ms": 1000
+      },
+      "valid": false
+    }
+  ]
+}

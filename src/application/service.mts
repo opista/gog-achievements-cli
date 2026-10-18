@@ -1,14 +1,11 @@
+import type { GogAPIPort, GamesResult, Context, AchievementsResult } from './achievement-ports.mjs';
 import type {
-  GogAPIPort,
   CredentialVault,
   Session,
   LoginOptions,
   SignalOptions,
   AuthStatus,
-  GamesResult,
-  Context,
-  AchievementsResult,
-} from './ports.mjs';
+} from './auth-ports.mjs';
 import type {
   PublicGame,
   Queue,
@@ -21,8 +18,7 @@ import type {
   LockQueueItem,
   LockResult,
 } from '../domain/model.mjs';
-import { GogError, requireValue } from '../domain/errors.mjs';
-import { errorCode } from '../domain/objects.mjs';
+import { requireValue } from '../domain/errors.mjs';
 import { id, timestamp, defaultTimestamp } from '../domain/values.mjs';
 import {
   validateQueue,
@@ -35,7 +31,8 @@ import {
 import { restorationPlan } from '../domain/restoration.mjs';
 import { filterAchievements, type AchievementFilters } from '../domain/achievements.mjs';
 import { buildLoginURL } from './oauth.mjs';
-import { validSession } from './session.mjs';
+import * as execution from './queue-execution.mjs';
+import type { AchievementServicePort } from './service-contract.mjs';
 import * as auth from './session.mjs';
 export interface ServiceDependencies {
   api: GogAPIPort;
@@ -43,7 +40,7 @@ export interface ServiceDependencies {
   wait: (ms: number) => Promise<unknown>;
   now: () => number;
 }
-export class AchievementService {
+export class AchievementService implements AchievementServicePort {
   api: GogAPIPort;
   vault: CredentialVault;
   wait: (ms: number) => Promise<unknown>;
@@ -167,7 +164,7 @@ export class AchievementService {
     const { session, game, achievements } = await this.context(gameID);
     const queue: Queue = {
       schema_version: 1,
-      user_id: String(session.user_id),
+      user_id: session.user_id,
       game: this.publicGame(game),
       created_at: defaultTimestamp(this.now()),
       updated_at: defaultTimestamp(this.now()),
@@ -207,149 +204,39 @@ export class AchievementService {
     return restorationPlan(queue, context);
   }
 
-  async readAchievement(
+  // Compatibility methods delegate to the queue executor; application entry points stay below.
+  readAchievement(
     game: Game,
     session: Session,
     achievementID: string,
   ): Promise<Achievement | undefined> {
-    return (await this.api.achievements(game, session)).find((item) => item.id === achievementID);
+    return execution.readAchievement(this, game, session, achievementID);
   }
 
-  async verifyUnlock(
+  verifyUnlock(
     game: Game,
     session: Session,
     achievementID: string,
   ): Promise<Achievement | undefined> {
-    let achievement;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt) await this.wait(500 * attempt);
-      achievement = await this.readAchievement(game, session, achievementID);
-      if (achievement?.unlocked) break;
-    }
-    return achievement;
+    return execution.verifyAchievement(this, game, session, achievementID, true);
   }
 
-  async restoreAchievement(
+  restoreAchievement(
     game: Game,
     session: Session,
     queued: QueueItem,
     result: RestorationResult,
   ): Promise<RestorationResult> {
-    if (queued.action === 'lock') {
-      requireValue(result.action === 'lock', 'INVALID_QUEUE', 'The queue action changed.');
-      return this.lockAchievement(game, session, queued, result);
-    }
-    requireValue(result.action !== 'lock', 'INVALID_QUEUE', 'The queue action changed.');
-    let attempted = false;
-    try {
-      // Re-read before each write. GOG has no atomic compare/set operation.
-      const latest = await this.readAchievement(game, session, queued.achievement_id);
-      requireValue(
-        latest && latest.key === queued.key,
-        'ACHIEVEMENT_CHANGED',
-        'The achievement changed before the write.',
-        5,
-      );
-      if (latest.unlocked)
-        return {
-          ...result,
-          status: 'skipped_already_unlocked',
-          actual_unlocked_at: latest.unlocked_at,
-        };
-      attempted = true;
-      let writeError: unknown;
-      try {
-        await this.api.unlock(game, session, queued.achievement_id, queued.unlocked_at);
-      } catch (error) {
-        writeError = error;
-      }
-      // Reconcile even after a lost POST response; never repeat that POST.
-      const verified = await this.verifyUnlock(game, session, queued.achievement_id);
-      const observed = { ...result, actual_unlocked_at: verified?.unlocked_at ?? null };
-      if (verified?.unlocked) {
-        return Date.parse(verified.unlocked_at) === Date.parse(queued.unlocked_at)
-          ? { ...observed, status: 'restored' }
-          : {
-              ...observed,
-              status: 'restored_with_different_date',
-              error_code: 'UNLOCK_DATE_MISMATCH',
-            };
-      }
-      return {
-        ...observed,
-        status: ['API_REJECTED', 'AUTH_REJECTED'].some((code) => code === errorCode(writeError))
-          ? 'failed'
-          : 'unconfirmed',
-        error_code: writeError instanceof GogError ? writeError.code : 'UNLOCK_NOT_CONFIRMED',
-      };
-    } catch (error) {
-      return {
-        ...result,
-        status: attempted ? 'unconfirmed' : 'not_attempted',
-        error_code: error instanceof GogError ? error.code : 'INTERNAL_ERROR',
-      };
-    }
+    return execution.restoreAchievement(this, game, session, queued, result);
   }
 
-  async lockAchievement(
+  lockAchievement(
     game: Game,
     session: Session,
     queued: LockQueueItem,
     result: LockResult,
   ): Promise<LockResult> {
-    let attempted = false;
-    let actualUnlockedAt = result.actual_unlocked_at;
-    try {
-      const latest = await this.readAchievement(game, session, queued.achievement_id);
-      if (latest) actualUnlockedAt = latest.unlocked_at;
-      requireValue(
-        latest && latest.key === queued.key,
-        'ACHIEVEMENT_CHANGED',
-        'The achievement changed before the write.',
-        5,
-      );
-      if (!latest.unlocked)
-        return { ...result, status: 'skipped_already_locked', actual_unlocked_at: null };
-      requireValue(
-        Date.parse(latest.unlocked_at) === Date.parse(queued.previous_unlocked_at),
-        'ACHIEVEMENT_CHANGED',
-        'The unlock date changed. Remove this lock request and review it again.',
-        5,
-      );
-      attempted = true;
-      let writeError: unknown;
-      try {
-        await this.api.lock(game, session, queued.achievement_id);
-      } catch (error) {
-        writeError = error;
-      }
-      // Reconcile a lost response with reads only. Never repeat the lock POST.
-      let verified: Achievement | undefined;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (attempt) await this.wait(500 * attempt);
-        verified = await this.readAchievement(game, session, queued.achievement_id);
-        if (verified && verified.key === queued.key && !verified.unlocked) break;
-      }
-      const observed = { ...result, actual_unlocked_at: verified?.unlocked_at ?? null };
-      if (verified && verified.key === queued.key && !verified.unlocked)
-        return { ...observed, status: 'locked' };
-      return {
-        ...observed,
-        status:
-          verified?.key === queued.key &&
-          ['API_REJECTED', 'AUTH_REJECTED'].some((code) => code === errorCode(writeError))
-            ? 'failed'
-            : 'unconfirmed',
-        error_code: writeError instanceof GogError ? writeError.code : 'LOCK_NOT_CONFIRMED',
-      };
-    } catch (error) {
-      return {
-        ...result,
-        actual_unlocked_at: actualUnlockedAt,
-        status: attempted ? 'unconfirmed' : 'not_attempted',
-        error_code: error instanceof GogError ? error.code : 'INTERNAL_ERROR',
-      };
-    }
+    return execution.lockAchievement(this, game, session, queued, result);
   }
 
   async applyQueue(input: unknown, { dryRun = true } = {}): Promise<RestorationReport> {
@@ -371,36 +258,6 @@ export class AchievementService {
     };
     if (dryRun || !results.some((item) => item.status === 'pending')) return report;
 
-    const scoped = validSession(
-      await this.api.refresh(context.session.refresh_token, context.game),
-    );
-    requireValue(
-      scoped.user_id === queue.user_id,
-      'ACCOUNT_MISMATCH',
-      'The game login belongs to another account.',
-      5,
-    );
-    for (let index = 0; index < results.length; index++) {
-      const result = results[index]!;
-      if (result.status !== 'pending') continue;
-      results[index] = await this.restoreAchievement(
-        context.game,
-        scoped,
-        queue.items[index]!,
-        result,
-      );
-      const status = results[index]!.status;
-      if (
-        !['restored', 'skipped_already_unlocked', 'locked', 'skipped_already_locked'].includes(
-          status,
-        )
-      ) {
-        report.complete = false;
-        for (const remaining of results.slice(index + 1))
-          if (remaining.status === 'pending') remaining.status = 'not_attempted';
-        break;
-      }
-    }
-    return report;
+    return execution.executeQueue(this, queue, context, report);
   }
 }

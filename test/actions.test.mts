@@ -577,3 +577,56 @@ void test('CLI lock creation and partial apply return exit 6 with lock dates and
   assert.equal(error.details!.report!.results[0]!.previous_unlocked_at, DATE);
   assert.match(formatOutput({ ...result, format: 'text' }, { columns: 40 }), /Action: Lock/);
 });
+
+void test('unlock verification requires the original achievement key and stops an unconfirmed batch', async () => {
+  for (const changed of ['missing', 'key']) {
+    const f = fixture();
+    const queue = await f.service.createQueue(GAME_ID, [ACHIEVEMENT_ID, SECOND_ID], DATE);
+    f.setHook((url, init) => {
+      if (url.pathname.endsWith('/achievements') && init.method === 'GET' && f.writes.length)
+        return new Response(
+          JSON.stringify({
+            items:
+              changed === 'missing'
+                ? [f.achievements[1]!]
+                : [{ ...f.achievements[0]!, achievement_key: 'changed' }, f.achievements[1]!],
+            total_count: changed === 'missing' ? 1 : 2,
+          }),
+        );
+      return undefined;
+    });
+    const report = await f.service.applyQueue(queue, { dryRun: false });
+    assert.equal(report.complete, false);
+    assert.deepEqual(
+      report.results.map((item) => item.status),
+      ['unconfirmed', 'not_attempted'],
+    );
+    assert.equal(report.results[0]!.error_code, 'UNLOCK_NOT_CONFIRMED');
+    assert.equal(f.writes.length, 1);
+  }
+});
+
+void test('unlock verification retries a stale identity with reads only', async () => {
+  const f = fixture();
+  const queue = await f.service.createQueue(GAME_ID, [ACHIEVEMENT_ID], DATE);
+  let staleReads = 0;
+  f.setHook((url, init) => {
+    if (
+      url.pathname.endsWith('/achievements') &&
+      init.method === 'GET' &&
+      f.writes.length &&
+      staleReads++ < 2
+    )
+      return new Response(
+        JSON.stringify({
+          items: [{ ...f.achievements[0]!, achievement_key: 'changed' }, f.achievements[1]!],
+          total_count: 2,
+        }),
+      );
+    return undefined;
+  });
+  const report = await f.service.applyQueue(queue, { dryRun: false });
+  assert.equal(report.results[0]!.status, 'restored');
+  assert.equal(staleReads, 3);
+  assert.equal(f.writes.length, 1);
+});

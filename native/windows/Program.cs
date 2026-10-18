@@ -15,7 +15,7 @@ internal static class Program
         {
             if (args.SequenceEqual(["--self-test"]))
             {
-                var selfTest = LoginProtocol.SelfTest();
+                var selfTest = LoginProtocolTests.Run();
                 return Emit(selfTest, (bool)selfTest["self_test_passed"]! ? 0 : 1);
             }
             if (args.SequenceEqual(["--browser-self-test"]))

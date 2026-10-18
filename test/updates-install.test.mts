@@ -25,12 +25,14 @@ import { extractUpdate, validatePackage } from '../src/adapters/updates/archive.
 import {
   installation,
   installPackage,
+  installPackageResult,
   preparePackage,
   verifyChecksum,
   verifyExecutable,
 } from '../src/adapters/updates/install.mjs';
 import { CLIUpdater } from '../src/adapters/updates/updater.mjs';
 import { packageFixture, releaseMetadata, zipFixture } from './update-fixture.mjs';
+import { GogError } from '../src/domain/errors.mjs';
 import { gogError } from './assertions.mjs';
 
 async function temp(t: TestContext) {
@@ -267,6 +269,82 @@ void test('verification or replacement failures restore previous files and remov
   }
 });
 
+void test('cleanup failures preserve a verified install and still release the lock', async (t) => {
+  const f = await installedFixture(t);
+  const attempts: string[] = [];
+  const result = await installPackageResult(
+    f.directory,
+    f.next.release,
+    (staging) => preparePackage(f.next.bytes, f.checksum, staging, f.next.release),
+    {
+      verify: noVerify,
+      cleanup: async (path, options) => {
+        attempts.push(String(path));
+        if (String(path).includes('.gog-achievements-update-')) throw new Error('cleanup failed');
+        await rm(path, options);
+      },
+    },
+  );
+  await validatePackage(f.directory, f.next.release);
+  await validatePackage(result.backup_directory, f.previous.release);
+  assert.equal(result.cleanup_paths.length, 1);
+  assert.ok(attempts.includes(join(f.directory, '.gog-achievements-update.lock')));
+  await assert.rejects(access(join(f.directory, '.gog-achievements-update.lock')));
+});
+
+void test('cleanup failures keep the original transaction error and attempt all paths', async (t) => {
+  const f = await installedFixture(t);
+  const original = new GogError('UPDATE_VERIFICATION_FAILED', 'Fixture verification failed.', 7);
+  const attempts: string[] = [];
+  let verifications = 0;
+  await assert.rejects(
+    installPackageResult(
+      f.directory,
+      f.next.release,
+      (staging) => preparePackage(f.next.bytes, f.checksum, staging, f.next.release),
+      {
+        verify: async () => {
+          if (++verifications === 2) throw original;
+        },
+        cleanup: async (path, options) => {
+          attempts.push(String(path));
+          if (!String(path).endsWith('.lock')) throw new Error('cleanup failed');
+          await rm(path, options);
+        },
+      },
+    ),
+    (error) => {
+      assert.equal(error, original);
+      assert.equal(original.details?.cleanup_paths instanceof Array, true);
+      assert.equal((original.details?.cleanup_paths as string[]).length, 2);
+      return true;
+    },
+  );
+  assert.equal(attempts.length, 3);
+  await validatePackage(f.directory, f.previous.release);
+  await assert.rejects(access(join(f.directory, '.gog-achievements-update.lock')));
+});
+
+void test('failed lock cleanup is reported without changing the installed version', async (t) => {
+  const f = await installedFixture(t);
+  const lock = join(f.directory, '.gog-achievements-update.lock');
+  const result = await installPackageResult(
+    f.directory,
+    f.next.release,
+    (staging) => preparePackage(f.next.bytes, f.checksum, staging, f.next.release),
+    {
+      verify: noVerify,
+      cleanup: async (path, options) => {
+        if (String(path) === lock) throw new Error('lock cleanup failed');
+        await rm(path, options);
+      },
+    },
+  );
+  assert.deepEqual(result.cleanup_paths, [lock]);
+  await validatePackage(f.directory, f.next.release);
+  await access(lock);
+});
+
 void test('concurrent updates and non-writable locations fail with useful errors', async (t) => {
   const f = await installedFixture(t);
   const lock = join(f.directory, '.gog-achievements-update.lock');
@@ -284,7 +362,7 @@ void test('concurrent updates and non-writable locations fail with useful errors
   );
 });
 
-void test('recovery errors retain the backup and report its location', async (t) => {
+void test('recovery errors retain the backup and lock despite staging cleanup failure', async (t) => {
   const f = await installedFixture(t);
   let moves = 0;
   await assert.rejects(
@@ -299,6 +377,9 @@ void test('recovery errors retain the backup and report its location', async (t)
           if (moves >= 3) throw new Error('disk unavailable');
           await rename(from, to);
         },
+        cleanup: async () => {
+          throw new Error('cleanup unavailable');
+        },
       },
     ),
     (error) => {
@@ -312,6 +393,7 @@ void test('recovery errors retain the backup and report its location', async (t)
     entry.startsWith('.gog-achievements-backup-'),
   );
   assert.ok(backup);
+  await access(join(f.directory, '.gog-achievements-update.lock'));
   assert.equal(
     await readFile(join(f.directory, backup, 'gog-achievements'), 'utf8'),
     'executable 0.3.0',
@@ -435,4 +517,53 @@ void test('the updater checks, downloads, verifies and installs using only a loc
       ),
   });
   assert.equal((await defaults.check()).can_update, false);
+});
+
+void test('updater reports cleanup instructions while confirming the installed release', async (t) => {
+  const f = await installedFixture(t);
+  const updater = new CLIUpdater({
+    version: '0.3.0',
+    platform: 'darwin',
+    architecture: 'arm64',
+    packaged: true,
+    executable: f.executable,
+    verify: noVerify,
+    request: async (url) =>
+      new Response(
+        url.endsWith('/latest')
+          ? JSON.stringify(releaseMetadata())
+          : url.endsWith('.sha256')
+            ? f.checksum
+            : f.next.bytes,
+      ),
+    cleanup: async (path, options) => {
+      if (String(path).includes('.gog-achievements-update-')) throw new Error('cleanup failed');
+      await rm(path, options);
+    },
+  });
+  await updater.check();
+  const result = await updater.install();
+  assert.equal(result.updated, true);
+  assert.equal(result.current_version, '0.4.0');
+  assert.match(result.instructions!, /update is installed, but cleanup is incomplete/);
+  assert.match(result.instructions!, /gog-achievements-update-/);
+  await assert.rejects(access(join(f.directory, '.gog-achievements-update.lock')));
+});
+
+void test('file-backed archives retain validation and release their file handle', async (t) => {
+  const directory = await temp(t);
+  const f = packageFixture();
+  const archive = join(directory, 'archive.zip');
+  await writeFile(archive, f.bytes);
+  const output = join(directory, 'extracted');
+  await mkdir(output);
+  await extractUpdate(archive, output, f.release);
+  await validatePackage(output, f.release);
+  await rm(archive);
+  await writeFile(archive, zipFixture([{ name: `${f.release.archive.slice(0, -4)}/../outside` }]));
+  await assert.rejects(
+    extractUpdate(archive, output, f.release),
+    (error) => gogError(error).code === 'INVALID_UPDATE_ARCHIVE',
+  );
+  await rm(archive);
 });

@@ -371,6 +371,16 @@ function failure(error: PublicError, width: number) {
       )
         lines.push(paragraph(`${name}: ${value}`, width));
     }
+  const cleanupPaths = error.details?.cleanup_paths;
+  if (Array.isArray(cleanupPaths)) {
+    const paths = cleanupPaths.filter((path): path is string => typeof path === 'string' && !!path);
+    if (paths.length)
+      lines.push(
+        '',
+        paragraph('Cleanup was incomplete. Review these paths before another update:', width),
+        ...paths.map((path) => paragraph(path, width, '  ')),
+      );
+  }
   return lines.join('\n');
 }
 
@@ -399,6 +409,8 @@ export function formatOutput(
                 ? 'Run: gog-achievements self update'
                 : text(data.instructions)
               : 'The installed CLI is up to date.');
+      if ('updated' in data && data.updated && data.instructions)
+        body += `\n${paragraph(data.instructions, width)}`;
       break;
     }
     case 'help':
