@@ -1,5 +1,6 @@
 import { LOGIN_TIMEOUT_MS, MAX_LOGIN_TIMEOUT_MS } from '../domain/login-policy.mjs';
 import { validateAchievementStatus } from '../domain/achievements.mjs';
+import { achievementCSV } from './csv.mjs';
 import type { OutputStream, NativeLoginOptions, AuthStatus } from '../application/ports.mjs';
 import type { Queue, Success, PublicError } from '../domain/model.mjs';
 import type { CLIOutcome, CommandName, CommandData, OutcomeMeta } from './contracts.mjs';
@@ -37,6 +38,7 @@ export interface CLIEffects {
   };
   updates: UpdatePort;
   confirm: (question: string) => Promise<boolean>;
+  writeExport: (path: string, data: string) => Promise<string>;
 }
 export async function dispatchCLI(
   args: string[],
@@ -51,6 +53,7 @@ export async function dispatchCLI(
     files,
     updates,
     confirm,
+    writeExport,
   }: CLIEffects,
 ): Promise<CLIOutcome> {
   let pretty = args.includes('--pretty');
@@ -195,6 +198,11 @@ export async function dispatchCLI(
         name,
         await service.listAchievements(flags.game, { search: flags.search, status }),
       );
+    } else if (name === 'achievements export') {
+      const status = validateAchievementStatus(flags.status);
+      const data = await service.listAchievements(flags.game, { search: flags.search, status });
+      const path = await writeExport(flags.file, achievementCSV(data.game, data.achievements));
+      return success(name, { path, count: data.achievements.length });
     } else if (name === 'doctor') {
       let login: AuthStatus | PublicError;
       try {

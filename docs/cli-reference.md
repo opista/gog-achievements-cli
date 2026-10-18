@@ -6,23 +6,24 @@ Use the [README](../README.md) for installation, examples and the LLM agent work
 
 All commands accept `--json`, `--pretty` and `--help` (`-h`). Flags in the required column must be supplied. `auth finish` requires exactly one input source; `auth import` requires `--stdin`.
 
-| Command             | Required flags                                               | Optional flags                                                         |
-| ------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `auth login`        | None                                                         | `--no-open`, `--timeout SECONDS`                                       |
-| `auth status`       | None                                                         | None                                                                   |
-| `auth logout`       | None                                                         | None                                                                   |
-| `auth finish`       | `--stdin` or `--clipboard`                                   | None                                                                   |
-| `auth import`       | `--stdin`                                                    | None                                                                   |
-| `games list`        | None                                                         | `--search TEXT` or `--ids-only`                                        |
-| `achievements list` | `--game GAME_ID`                                             | `--search TEXT`, `--status all\|locked\|unlocked`                      |
-| `queue create`      | `--game GAME_ID`, `--file PATH`                              | `--achievement ID`, `--unlocked-at TIMESTAMP`, `--action unlock\|lock` |
-| `queue add`         | `--file PATH`, `--achievement ID`                            | `--unlocked-at TIMESTAMP`, `--action unlock\|lock`                     |
-| `queue remove`      | `--file PATH`, `--achievement ID`                            | None                                                                   |
-| `queue set-date`    | `--file PATH`, `--achievement ID`, `--unlocked-at TIMESTAMP` | None                                                                   |
-| `queue show`        | `--file PATH`                                                | None                                                                   |
-| `queue apply`       | `--file PATH`                                                | `--dry-run` or `--yes`                                                 |
-| `doctor`            | None                                                         | None                                                                   |
-| `self update`       | None                                                         | `--check` or `--yes`                                                   |
+| Command               | Required flags                                               | Optional flags                                                         |
+| --------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `auth login`          | None                                                         | `--no-open`, `--timeout SECONDS`                                       |
+| `auth status`         | None                                                         | None                                                                   |
+| `auth logout`         | None                                                         | None                                                                   |
+| `auth finish`         | `--stdin` or `--clipboard`                                   | None                                                                   |
+| `auth import`         | `--stdin`                                                    | None                                                                   |
+| `games list`          | None                                                         | `--search TEXT` or `--ids-only`                                        |
+| `achievements list`   | `--game GAME_ID`                                             | `--search TEXT`, `--status all\|locked\|unlocked`                      |
+| `achievements export` | `--game GAME_ID`, `--file PATH`                              | `--search TEXT`, `--status all\|locked\|unlocked`                      |
+| `queue create`        | `--game GAME_ID`, `--file PATH`                              | `--achievement ID`, `--unlocked-at TIMESTAMP`, `--action unlock\|lock` |
+| `queue add`           | `--file PATH`, `--achievement ID`                            | `--unlocked-at TIMESTAMP`, `--action unlock\|lock`                     |
+| `queue remove`        | `--file PATH`, `--achievement ID`                            | None                                                                   |
+| `queue set-date`      | `--file PATH`, `--achievement ID`, `--unlocked-at TIMESTAMP` | None                                                                   |
+| `queue show`          | `--file PATH`                                                | None                                                                   |
+| `queue apply`         | `--file PATH`                                                | `--dry-run` or `--yes`                                                 |
+| `doctor`              | None                                                         | None                                                                   |
+| `self update`         | None                                                         | `--check` or `--yes`                                                   |
 
 Repeat `--achievement` to select more than one ID. `games list --search` requires titles and cannot be combined with `--ids-only`. `auth login --no-open` cannot be combined with `--timeout`. `queue apply --yes` cannot be combined with `--dry-run`.
 
@@ -39,6 +40,18 @@ gog-achievements achievements list --game GAME_ID --search city --status locked 
 Source consumers can import `filterAchievements(achievements, { search, status })` from the public entry point to use the same selection for CSV export. It returns matching entries in source order without changing the input or achievement fields.
 
 Use the installed executable's `--help --json` output to discover its command contract. Source users can run `node bin/gog-achievements.mjs --help --json`.
+
+## CSV export
+
+`achievements export --game GAME_ID --file PATH` writes these columns in order:
+
+```text
+game_id,game_title,achievement_id,name,description,hidden,status,unlocked_at
+```
+
+Optional `--search TEXT` and `--status all|locked|unlocked` use the same shared filter as `achievements list`. Selection preserves source order and includes hidden names and descriptions. The file uses UTF-8, comma separators, CRLF record endings and standard double-quote escaping for commas, quotes and line breaks. IDs retain their exact digits. `hidden` is `true` or `false`; `status` is `locked` or `unlocked`. Unlock dates use UTC RFC 3339 timestamps ending in `Z`; locked dates are empty. No matches still produce the header.
+
+CSV is written only to `PATH`. Readable stdout confirms the saved absolute path and row count. JSON stdout uses the normal success envelope with `data.path` and `data.count`. Existing files, directories and links are never replaced; `EXPORT_EXISTS` exits with 2. Other file failures return `EXPORT_WRITE_FAILED` with exit 2. Data retrieval failures keep their existing codes and create no export file. Concurrent exports cannot overwrite each other. Export does not modify achievements or queues.
 
 ## CLI updates and recovery
 

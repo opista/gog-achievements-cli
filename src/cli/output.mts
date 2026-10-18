@@ -417,6 +417,11 @@ export function formatOutput(
     case 'achievements list':
       body = achievements(outcome.result.data, width);
       break;
+    case 'achievements export': {
+      const { path, count } = outcome.result.data;
+      body = `Exported ${count} achievement${count === 1 ? '' : 's'} to ${text(path)}.`;
+      break;
+    }
     case 'queue apply':
       body = report(outcome.result.data, width);
       break;

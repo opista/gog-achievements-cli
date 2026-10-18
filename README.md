@@ -8,19 +8,20 @@ The CLI shows readable text by default. Every command also supports JSON for scr
 
 ## Features
 
-| Feature                                                                    | Commands                                                  |
-| -------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Sign in through a native GOG window and store credentials securely.        | `auth login`, `auth status`, `auth logout`                |
-| Search your owned games, or get IDs without titles.                        | `games list --search TEXT`, `games list --ids-only`       |
-| View achievements, including hidden entries, lock status and unlock dates. | `achievements list --game GAME_ID`                        |
-| Save selected achievements in a local queue for one account and game.      | `queue create`, `queue add`, `queue remove`               |
-| Queue unlocks, locks, or both, with each lock's original date saved.       | `queue create --action unlock`, `queue add --action lock` |
-| Set a date for each queued achievement.                                    | `queue set-date`                                          |
-| Inspect a saved queue without network access.                              | `queue show`                                              |
-| Preview changes, apply them, and check each result against GOG.            | `queue apply --dry-run`, `queue apply --yes`              |
-| Check local support and saved login availability.                          | `doctor`                                                  |
-| Check for a new CLI release and install it manually.                       | `self update --check`, `self update`                      |
-| Discover command options and get structured output.                        | `--help`, `--json`, `--json --pretty`                     |
+| Feature                                                                     | Commands                                                  |
+| --------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Sign in through a native GOG window and store credentials securely.         | `auth login`, `auth status`, `auth logout`                |
+| Search your owned games, or get IDs without titles.                         | `games list --search TEXT`, `games list --ids-only`       |
+| View achievements, including hidden entries, lock status and unlock dates.  | `achievements list --game GAME_ID`                        |
+| Export achievements to a new UTF-8 CSV file with search and status filters. | `achievements export --game GAME_ID --file PATH`          |
+| Save selected achievements in a local queue for one account and game.       | `queue create`, `queue add`, `queue remove`               |
+| Queue unlocks, locks, or both, with each lock's original date saved.        | `queue create --action unlock`, `queue add --action lock` |
+| Set a date for each queued achievement.                                     | `queue set-date`                                          |
+| Inspect a saved queue without network access.                               | `queue show`                                              |
+| Preview changes, apply them, and check each result against GOG.             | `queue apply --dry-run`, `queue apply --yes`              |
+| Check local support and saved login availability.                           | `doctor`                                                  |
+| Check for a new CLI release and install it manually.                        | `self update --check`, `self update`                      |
+| Discover command options and get structured output.                         | `--help`, `--json`, `--json --pretty`                     |
 
 ## Install
 
@@ -148,6 +149,15 @@ Review each action before using `--yes`. Lock requests save the current unlock d
 Apply follows queue order. Each write is separate: earlier confirmed changes stay applied if a later change fails. Apply never rolls them back automatically. Retry skips items already in their requested state. Keep the saved queue or capture the JSON report to retain previous dates. Restoring an exact historical date remains subject to GOG's date handling.
 
 Re-locking clears the GOG achievement record. It does not reset game saves or statistics. The game or pending Galaxy synchronization may unlock it again. Live re-lock behavior and Galaxy display refresh remain unverified on a real account; tests use fixtures.
+
+## Export achievements as CSV
+
+```sh
+gog-achievements achievements export --game GAME_ID --file achievements.csv
+gog-achievements achievements export --game GAME_ID --file locked.csv --search story --status locked --json
+```
+
+Export uses the same search and status filters as `achievements list`. The CLI writes a new UTF-8 CSV file and refuses to overwrite an existing file. It includes hidden achievement details, keeps exact ID digits, and uses UTC unlock dates. Locked entries have an empty date. Import ID columns as text in spreadsheet applications to keep all digits. Default stdout confirms the path and row count; `--json` returns `{ "ok": true, "data": { "path": "/absolute/path/locked.csv", "count": 2 } }`. A selection with no matches writes the header with count 0. Export makes no achievement changes.
 
 ## Manage your queue
 
