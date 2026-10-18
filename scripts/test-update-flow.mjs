@@ -6,7 +6,7 @@ import { createReadStream } from 'node:fs';
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { withCompiled } from './compile.mjs';
 import { bundleCLI, createArchive, packageExecutable } from './package.mjs';
@@ -28,8 +28,19 @@ await withCompiled(async () => {
   const latest = `${major}.${/** @type {number} */ (minor) + 1}.0`;
   const template = resolve('dist', `gog-achievements-${current}-${target}`);
   const executableName = platform === 'win32' ? 'gog-achievements.exe' : 'gog-achievements';
-  const productionExecutable = join(template, executableName);
-  const originalExecutableHash = digest(await readFile(productionExecutable));
+  // Intel Macs keep the versioned code in lib/main.cjs; their launcher can
+  // remain identical across releases. Check every package file on all targets.
+  const packagePaths = (await readdir(template, { recursive: true, withFileTypes: true }))
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(template, join(entry.parentPath, entry.name)))
+    .sort();
+  async function packageHashes(/** @type {string} */ directory) {
+    /** @type {Record<string, string>} */
+    const hashes = {};
+    for (const path of packagePaths) hashes[path] = digest(await readFile(join(directory, path)));
+    return hashes;
+  }
+  const originalPackageHashes = await packageHashes(template);
   const originalPackage = await readFile('package.json');
   const helper = resolve('native/bin', platform === 'win32' ? 'gog-login.exe' : 'gog-login');
   const temporary = await mkdtemp(join(tmpdir(), 'gog-full-update-flow-'));
@@ -293,12 +304,14 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
     const installedDirectory = join(temporary, 'installed');
     const nextDirectory = join(temporary, `gog-achievements-${latest}-${target}`);
     const executable = await packageVersion(current, installedDirectory, fixtureURL);
-    const nextExecutable = await packageVersion(latest, nextDirectory, fixtureURL);
+    await packageVersion(latest, nextDirectory, fixtureURL);
     await createArchive(nextDirectory, archive, platform);
     checksum = digest(await readFile(archive));
-    const before = digest(await readFile(executable));
-    const nextHash = digest(await readFile(nextExecutable));
-    assert.notEqual(before, nextHash);
+    const before = await packageHashes(installedDirectory);
+    const nextHashes = await packageHashes(nextDirectory);
+    assert.notDeepEqual(before, nextHashes);
+    if (portable) assert.notEqual(before['lib/main.cjs'], nextHashes['lib/main.cjs']);
+    else assert.notEqual(before[executableName], nextHashes[executableName]);
     const queue =
       JSON.stringify({
         schema_version: 1,
@@ -352,8 +365,8 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
       2,
     );
     assert.equal(JSON.parse(unapproved.stdout).error.code, 'UPDATE_CONFIRMATION_REQUIRED');
-    assert.equal(digest(await readFile(executable)), before);
-    log('PASS: check-only and unconfirmed commands preserved the old executable.');
+    assert.deepEqual(await packageHashes(installedDirectory), before);
+    log('PASS: check-only and unconfirmed commands preserved the old package.');
 
     corruptChecksum = true;
     const rejected = await command(
@@ -363,7 +376,7 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
       4,
     );
     assert.equal(JSON.parse(rejected.stdout).error.code, 'UPDATE_CHECKSUM_MISMATCH');
-    assert.equal(digest(await readFile(executable)), before);
+    assert.deepEqual(await packageHashes(installedDirectory), before);
     assert.equal(await readFile(queuePath, 'utf8'), queue);
     assert.equal(
       (await readdir(installedDirectory)).some((name) => name.startsWith('.gog-achievements-')),
@@ -384,13 +397,14 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
     assert.equal(data.updated, true);
     assert.equal(data.previous_version, current);
     assert.equal(data.current_version, latest);
-    const after = digest(await readFile(executable));
-    assert.equal(after, nextHash);
-    assert.notEqual(after, before);
+    const after = await packageHashes(installedDirectory);
+    assert.deepEqual(after, nextHashes);
+    assert.notDeepEqual(after, before);
     const newHelp = await command(executable, ['--help', '--json'], 'new executable version');
     assert.equal(JSON.parse(newHelp.stdout).data.version, latest);
     const backupExecutable = join(data.backup_directory, executableName);
-    assert.equal(digest(await readFile(backupExecutable)), before);
+    const backupHashes = await packageHashes(data.backup_directory);
+    assert.deepEqual(backupHashes, before);
     const backupHelp = await command(
       backupExecutable,
       ['--help', '--json'],
@@ -405,7 +419,7 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
     );
     assert.deepEqual(JSON.parse(readQueue.stdout).data, JSON.parse(queue));
     log(
-      `PASS: the running CLI replaced itself from ${current} to ${latest}; the new binary hash matches the downloaded package.`,
+      `PASS: the running CLI replaced itself from ${current} to ${latest}; every installed file matches the downloaded package.`,
     );
     log(`PASS: the backup still reports ${current}, and the preserved queue works with ${latest}.`);
 
@@ -420,14 +434,14 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
         'real terminal prompt: decline',
       );
       assert.match(declined, /UPDATE_CONFIRMATION_REQUIRED/);
-      assert.equal(digest(await readFile(interactiveExecutable)), before);
+      assert.deepEqual(await packageHashes(interactiveDirectory), before);
       const accepted = await terminalUpdate(
         interactiveExecutable,
         'y',
         'real terminal prompt: accept and replace',
       );
       assert.ok(accepted.includes(`Updated gog-achievements from ${current} to ${latest}`));
-      assert.equal(digest(await readFile(interactiveExecutable)), nextHash);
+      assert.deepEqual(await packageHashes(interactiveDirectory), nextHashes);
       assert.equal(await readFile(join(interactiveDirectory, 'queue.json'), 'utf8'), queue);
       const interactiveHelp = await command(
         interactiveExecutable,
@@ -454,7 +468,7 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
     );
     assert.equal(JSON.parse(noUpdate.stdout).data.updated, false);
     assert.equal(JSON.parse(noUpdate.stdout).data.update_available, false);
-    assert.equal(digest(await readFile(executable)), after);
+    assert.deepEqual(await packageHashes(installedDirectory), after);
     unavailable = true;
     const unavailableLogin = await command(
       executable,
@@ -472,13 +486,13 @@ print(json.dumps({'exit_code': code, 'output': output.decode('utf-8', errors='re
       'PASS: after the update there is no notice; another update is a no-op; release-service failure keeps login successful.',
     );
 
-    assert.equal(digest(await readFile(productionExecutable)), originalExecutableHash);
+    assert.deepEqual(await packageHashes(template), originalPackageHashes);
     assert.deepEqual(await readFile('package.json'), originalPackage);
     Object.assign(report, {
       result: 'passed',
-      before_sha256: before,
-      after_sha256: after,
-      backup_sha256: before,
+      before_file_sha256: before,
+      after_file_sha256: after,
+      backup_file_sha256: backupHashes,
       release_archive_sha256: checksum,
       queue_preserved: true,
       backup_runs: true,
