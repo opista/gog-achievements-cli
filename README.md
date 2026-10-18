@@ -90,6 +90,12 @@ Replace `GAME_ID` below with an ID from your game list. Then choose the IDs of l
 gog-achievements achievements list --game GAME_ID
 ```
 
+Add `--search TEXT` to match achievement names or descriptions without case sensitivity. Combine it with `--status all|locked|unlocked` to limit the results. For example:
+
+```sh
+gog-achievements achievements list --game GAME_ID --search city --status locked --json
+```
+
 ### 2. Create a queue and review it
 
 ```sh

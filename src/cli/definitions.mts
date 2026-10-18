@@ -5,7 +5,14 @@ import { VERSION } from '../version.mjs';
 export const FLAGS = {
   game: { value: 'GAME_ID', description: 'GOG game ID from games list.' },
   file: { value: 'PATH', description: 'Local queue file.' },
-  search: { value: 'TEXT', description: 'Find games by title.' },
+  search: {
+    value: 'TEXT',
+    description: 'Find games by title or achievements by name or description.',
+  },
+  status: {
+    value: 'all|locked|unlocked',
+    description: 'Filter achievements by unlock status. Default: all.',
+  },
   achievement: {
     value: 'ACHIEVEMENT_ID',
     multiple: true,
@@ -56,7 +63,7 @@ export const COMMANDS = {
   },
   'games list': { flags: ['search', 'ids-only'], description: 'List owned GOG games.' },
   'achievements list': {
-    flags: ['game'],
+    flags: ['game', 'search', 'status'],
     required: ['game'],
     description: 'List achievements and their unlock dates for an owned game.',
   },
@@ -107,6 +114,7 @@ const EXAMPLES: Record<string, string[]> = {
   'games list': ['games list', 'games list --search Cyberpunk', 'games list --json'],
   'achievements list': [
     'achievements list --game 1423049311',
+    'achievements list --game 1423049311 --search city --status locked --json',
     'achievements list --game 1423049311 --json --pretty',
   ],
   'queue create': [

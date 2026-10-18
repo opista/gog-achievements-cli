@@ -36,6 +36,7 @@ void test('the public entry retains the existing JavaScript exports', () => {
       'buildLoginURL',
       'loginWithNativeWindow',
       'GogAchievements',
+      'filterAchievements',
       'MacKeychain',
       'WindowsVault',
       'credentialVault',

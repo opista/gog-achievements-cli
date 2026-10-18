@@ -14,7 +14,7 @@ All commands accept `--json`, `--pretty` and `--help` (`-h`). Flags in the requi
 | `auth finish`       | `--stdin` or `--clipboard`                                   | None                                                                   |
 | `auth import`       | `--stdin`                                                    | None                                                                   |
 | `games list`        | None                                                         | `--search TEXT` or `--ids-only`                                        |
-| `achievements list` | `--game GAME_ID`                                             | None                                                                   |
+| `achievements list` | `--game GAME_ID`                                             | `--search TEXT`, `--status all\|locked\|unlocked`                      |
 | `queue create`      | `--game GAME_ID`, `--file PATH`                              | `--achievement ID`, `--unlocked-at TIMESTAMP`, `--action unlock\|lock` |
 | `queue add`         | `--file PATH`, `--achievement ID`                            | `--unlocked-at TIMESTAMP`, `--action unlock\|lock`                     |
 | `queue remove`      | `--file PATH`, `--achievement ID`                            | None                                                                   |
@@ -29,6 +29,14 @@ Repeat `--achievement` to select more than one ID. `games list --search` require
 `queue create` and `queue add` use `--action unlock` by default. Use `--action lock` to capture currently unlocked achievements and their original dates. All IDs in that command use the same action. Add another action in a separate `queue add` call to build a mixed queue. `--action lock` cannot be combined with `--unlocked-at`. `queue set-date` rejects its entire selection if any selected entry is a lock.
 
 `games list` reads all library pages. `--ids-only` uses the owned-ID endpoint without titles. `achievements list` checks ownership and includes hidden entries. Its text output shows names, full IDs, lock status and UTC dates; JSON also includes descriptions and other fields.
+
+`achievements list --search TEXT` matches names and descriptions without case sensitivity. Leading and trailing spaces are ignored; an empty search keeps every entry. Combine it with `--status all|locked|unlocked` (default: `all`). The result keeps source order and the same JSON fields; `count` is the number of matching achievements. Without either option, results stay unchanged, including hidden entries. These options make no achievement writes.
+
+```sh
+gog-achievements achievements list --game GAME_ID --search city --status locked --json
+```
+
+Source consumers can import `filterAchievements(achievements, { search, status })` from the public entry point to use the same selection for CSV export. It returns matching entries in source order without changing the input or achievement fields.
 
 Use the installed executable's `--help --json` output to discover its command contract. Source users can run `node bin/gog-achievements.mjs --help --json`.
 
