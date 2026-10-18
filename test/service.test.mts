@@ -299,3 +299,28 @@ void test('a changed achievement stops apply before writing and reports later it
   assert.equal(report.results[0]!.error_code, 'ACHIEVEMENT_CHANGED');
   assert.equal(f.writes.length, 0);
 });
+
+void test('numeric stored account IDs normalize before refresh and queue account checks', async () => {
+  for (const expiresAt of [0, Date.now() + 3600_000]) {
+    const f = fixture({ authUser: '123' });
+    const stored = { ...f.vault.value!, user_id: 123, expires_at: expiresAt };
+    const saved: unknown[] = [];
+    f.service.vault = {
+      get: async () => stored,
+      set: async (value) => {
+        saved.push(value);
+      },
+      remove: async () => {},
+    };
+    assert.equal((await f.service.authStatus()).user_id, '123');
+    const queue = await f.service.createQueue(GAME_ID, [ACHIEVEMENT_ID], DATE);
+    assert.equal(queue.user_id, '123');
+    assert.equal(f.service.cachedSession?.user_id, '123');
+    const report = await f.service.applyQueue(queue, { dryRun: false });
+    assert.equal(report.complete, true);
+    assert.equal(report.results[0]!.status, 'restored');
+    assert.equal(stored.user_id, 123);
+    assert.equal(saved.length, expiresAt === 0 ? 1 : 0);
+    assert.equal(f.writes.length, 1);
+  }
+});

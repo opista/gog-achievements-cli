@@ -1,17 +1,17 @@
 import type {
-  GogAPIPort,
   CredentialVault,
   Session,
   LoginOptions,
   SignalOptions,
   AuthStatus,
-} from './ports.mjs';
+} from './auth-ports.mjs';
+import type { GogAPIPort } from './achievement-ports.mjs';
 import { GogError, requireValue } from '../domain/errors.mjs';
 import { fields } from '../domain/objects.mjs';
 import { id } from '../domain/values.mjs';
 import { LOGIN_REDIRECT } from './oauth.mjs';
 export interface SessionState {
-  api: GogAPIPort;
+  api: Pick<GogAPIPort, 'exchangeCode' | 'refresh'>;
   vault: CredentialVault;
   now: () => number;
   cachedSession: Session | null;
@@ -30,9 +30,12 @@ export function validSession(value: unknown): Session {
     'Sign in with auth login.',
     3,
   );
-  id(session.user_id, 'User ID');
-  // All required fields are checked above; retain the original session object.
-  return session as Record<string, unknown> & Session;
+  return {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    user_id: id(session.user_id, 'User ID'),
+    expires_at: session.expires_at,
+  };
 }
 export async function finishLogin(
   state: SessionState,

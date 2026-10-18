@@ -1,5 +1,6 @@
-import { fromBufferPromise } from 'yauzl';
+import { fromBufferPromise, openPromise } from 'yauzl';
 import type { Entry } from 'yauzl';
+import { once } from 'node:events';
 import { createWriteStream } from 'node:fs';
 import { chmod, lstat, mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -132,14 +133,21 @@ export async function validatePackage(
   }
 }
 
-export async function extractUpdate(bytes: Buffer, directory: string, release: CLIRelease) {
+export async function extractUpdate(
+  source: Buffer | string,
+  directory: string,
+  release: CLIRelease,
+) {
   try {
-    const zip = await fromBufferPromise(bytes, {
+    const options = {
       lazyEntries: true,
       autoClose: false,
       strictFileNames: true,
       validateEntrySizes: true,
-    });
+    };
+    const zip = await (typeof source === 'string'
+      ? openPromise(source, options)
+      : fromBufferPromise(source, options));
     try {
       requireValue(
         zip.entryCount <= 1024,
@@ -188,7 +196,9 @@ export async function extractUpdate(bytes: Buffer, directory: string, release: C
       }
       await validatePackage(directory, release);
     } finally {
+      const closed = typeof source === 'string' ? once(zip, 'close') : undefined;
       zip.close();
+      await closed;
     }
   } catch (error) {
     if (error instanceof GogError) throw error;

@@ -1,12 +1,13 @@
+import { join } from 'node:path';
 import type { FetchImpl } from '../../application/ports.mjs';
 import type { UpdateCheck, UpdatePort, UpdateResult } from '../../application/update-ports.mjs';
 import type { CLIRelease } from '../../domain/updates.mjs';
 import { newerVersion } from '../../domain/updates.mjs';
 import { requireValue } from '../../domain/errors.mjs';
 import { VERSION } from '../../version.mjs';
-import { ARCHIVE_LIMIT, downloadBytes, latestRelease } from './release.mjs';
-import { installation, installPackage, preparePackage } from './install.mjs';
-import { validatePackage } from './archive.mjs';
+import { downloadArchive, downloadBytes, latestRelease } from './release.mjs';
+import { installation, installPackageResult, verifyChecksumDigest } from './install.mjs';
+import { extractUpdate, validatePackage } from './archive.mjs';
 
 export interface UpdaterOptions {
   version?: string;
@@ -16,6 +17,7 @@ export interface UpdaterOptions {
   packaged?: boolean;
   executable?: string;
   verify?: (directory: string, release: CLIRelease) => Promise<void>;
+  cleanup?: import('./install.mjs').InstallOptions['cleanup'];
 }
 
 export class CLIUpdater implements UpdatePort {
@@ -68,7 +70,7 @@ export class CLIUpdater implements UpdatePort {
       7,
     );
     const directory = installed.directory;
-    const backup = await installPackage(
+    const result = await installPackageResult(
       directory,
       release,
       async (staging) => {
@@ -76,10 +78,15 @@ export class CLIUpdater implements UpdatePort {
         await validatePackage(directory, { ...release, version: checked.current_version });
         const request = this.options.request ? { request: this.options.request } : {};
         const checksum = await downloadBytes(release.checksum_url, 256, request);
-        const bytes = await downloadBytes(release.archive_url, ARCHIVE_LIMIT, request);
-        await preparePackage(bytes, checksum, staging, release);
+        const archive = join(staging, '.download.zip');
+        const digest = await downloadArchive(release.archive_url, archive, request);
+        verifyChecksumDigest(digest, checksum, release);
+        await extractUpdate(archive, staging, release);
       },
-      this.options.verify ? { verify: this.options.verify } : {},
+      {
+        ...(this.options.verify ? { verify: this.options.verify } : {}),
+        ...(this.options.cleanup ? { cleanup: this.options.cleanup } : {}),
+      },
     );
     this.release = undefined;
     this.checked = undefined;
@@ -89,7 +96,12 @@ export class CLIUpdater implements UpdatePort {
       update_available: false,
       updated: true,
       previous_version: checked.current_version,
-      backup_directory: backup,
+      backup_directory: result.backup_directory,
+      ...(result.cleanup_paths.length
+        ? {
+            instructions: `The update is installed, but cleanup is incomplete. After this command exits, remove these temporary paths before another update: ${result.cleanup_paths.join(', ')}.`,
+          }
+        : {}),
     };
   }
 }

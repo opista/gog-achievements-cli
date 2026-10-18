@@ -56,6 +56,7 @@ export async function runCLI(
     writeExport: writeExportFile,
     readInput: (mode) =>
       mode === 'clipboard' ? readClipboard(platform, execute, nativeHelperPath) : readStdin(stdin),
-    nativeLogin: (options) => withLoginSignals((signal) => nativeLogin({ ...options, signal })),
+    nativeLogin: (options) =>
+      withLoginSignals((signal) => nativeLogin({ ...options, service, signal })),
   });
 }

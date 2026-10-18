@@ -1,4 +1,4 @@
-import type { LoginOptions } from './ports.mjs';
+import type { LoginOptions } from './auth-ports.mjs';
 // Public Galaxy application parameters, also used by Heroic/gogdl.
 export const GALAXY_CLIENT_ID = '46899977096215655';
 export const GALAXY_CLIENT_SECRET =

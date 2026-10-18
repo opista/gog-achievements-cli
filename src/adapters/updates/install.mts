@@ -97,7 +97,10 @@ export async function verifyExecutable(
 }
 
 export function verifyChecksum(bytes: Buffer, checksum: Buffer, release: CLIRelease) {
-  const expected = createHash('sha256').update(bytes).digest('hex');
+  verifyChecksumDigest(createHash('sha256').update(bytes).digest('hex'), checksum, release);
+}
+
+export function verifyChecksumDigest(expected: string, checksum: Buffer, release: CLIRelease) {
   requireValue(
     checksum.toString('utf8').trim() === `${expected}  ${release.archive}`,
     'UPDATE_CHECKSUM_MISMATCH',
@@ -106,17 +109,27 @@ export function verifyChecksum(bytes: Buffer, checksum: Buffer, release: CLIRele
   );
 }
 
+export interface InstallOptions {
+  verify?: (directory: string, release: CLIRelease) => Promise<void>;
+  move?: typeof rename;
+  cleanup?: typeof rm;
+}
+
+// Keep the backup-path API used by release verification scripts.
 export async function installPackage(
   directory: string,
   release: CLIRelease,
   prepare: (staging: string) => Promise<void>,
-  {
-    verify = verifyExecutable,
-    move = rename,
-  }: {
-    verify?: (directory: string, release: CLIRelease) => Promise<void>;
-    move?: typeof rename;
-  } = {},
+  options: InstallOptions = {},
+) {
+  return (await installPackageResult(directory, release, prepare, options)).backup_directory;
+}
+
+export async function installPackageResult(
+  directory: string,
+  release: CLIRelease,
+  prepare: (staging: string) => Promise<void>,
+  { verify = verifyExecutable, move = rename, cleanup = rm }: InstallOptions = {},
 ) {
   const lockPath = join(directory, '.gog-achievements-update.lock');
   const lock = await open(lockPath, 'wx', 0o600).catch((error: unknown) => {
@@ -132,6 +145,8 @@ export async function installPackage(
   let backup: string | undefined;
   let retainBackup = false;
   let recoveryRequired = false;
+  let problem: GogError | undefined;
+  const cleanupPaths = new Set<string>();
   try {
     staging = await mkdtemp(join(directory, '.gog-achievements-update-'));
     await prepare(staging);
@@ -182,20 +197,44 @@ export async function installPackage(
       throw error;
     }
     retainBackup = true;
-    return backup;
   } catch (error) {
-    if (error instanceof GogError) throw error;
-    throw new GogError(
-      'UPDATE_INSTALL_FAILED',
-      'The update failed. The previous CLI files were restored.',
-      7,
-    );
+    problem =
+      error instanceof GogError
+        ? error
+        : new GogError(
+            'UPDATE_INSTALL_FAILED',
+            'The update failed. The previous CLI files were restored.',
+            7,
+          );
   } finally {
-    await lock.close();
-    if (staging) await rm(staging, { recursive: true, force: true });
-    if (backup && !retainBackup) await rm(backup, { recursive: true, force: true });
-    if (!recoveryRequired) await rm(lockPath, { force: true });
+    // Cleanup must not hide the transaction result or prevent the other releases.
+    await lock.close().catch(() => {
+      cleanupPaths.add(lockPath);
+    });
+    for (const path of [staging, ...(backup && !retainBackup ? [backup] : [])]) {
+      if (path)
+        await cleanup(path, { recursive: true, force: true }).catch(() => {
+          cleanupPaths.add(path);
+        });
+    }
+    if (!recoveryRequired) {
+      try {
+        await cleanup(lockPath, { force: true });
+        cleanupPaths.delete(lockPath);
+      } catch {
+        cleanupPaths.add(lockPath);
+      }
+    }
   }
+  if (problem) {
+    if (cleanupPaths.size)
+      problem.details = {
+        ...problem.details,
+        cleanup_paths: [...cleanupPaths],
+      };
+    throw problem;
+  }
+  return { backup_directory: backup!, cleanup_paths: [...cleanupPaths] };
 }
 
 export async function preparePackage(

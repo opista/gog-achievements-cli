@@ -1,4 +1,4 @@
-import type { CommandData, QueueItem, LockQueueItem, LockResult } from '../src/types.mjs';
+import type { CommandData, QueueItem, LockQueueItem, LockResult, Session } from '../src/types.mjs';
 import type { GogAPI } from '../src/api.mjs';
 import type { ParsedCommand } from '../src/cli/parse.mjs';
 import type { QueueView } from '../src/domain/queue.mjs';
@@ -28,4 +28,9 @@ export function architectureTypes(queue: QueueView): ParsedCommand {
   // @ts-expect-error A parsed queue command must have its required file flag.
   const command: ParsedCommand = { command: 'queue show', flags: {} };
   return command;
+}
+
+export function sessionTypes(session: Session) {
+  // @ts-expect-error Internal sessions contain normalized decimal string IDs.
+  session.user_id = 123;
 }

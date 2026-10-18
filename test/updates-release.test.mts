@@ -1,9 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
+import { access, lstat, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { once } from 'node:events';
 import { newerVersion, selectRelease } from '../src/domain/updates.mjs';
-import { downloadBytes, latestRelease } from '../src/adapters/updates/release.mjs';
+import { downloadArchive, downloadBytes, latestRelease } from '../src/adapters/updates/release.mjs';
 import { releaseMetadata } from './update-fixture.mjs';
 import { gogError } from './assertions.mjs';
 
@@ -177,4 +181,138 @@ void test('timeouts cancel a stalled response body from a local HTTP fixture', a
     }),
     (error) => gogError(error).code === 'UPDATE_REQUEST_FAILED',
   );
+});
+
+void test('archives stream to a new file and hash bytes before the transfer ends', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'gog-download-test-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, 'archive.zip');
+  const chunk = Buffer.alloc(64 * 1024, 42);
+  const expected = createHash('sha256');
+  const count = 32;
+  let sent = 0;
+  let wroteBeforeEnd = false;
+  const digest = await downloadArchive('https://github.com/archive.zip', path, {
+    request: async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            if (sent === count) {
+              controller.close();
+              return;
+            }
+            const file = await lstat(path).catch(() => undefined);
+            wroteBeforeEnd ||= !!file?.size;
+            sent++;
+            expected.update(chunk);
+            controller.enqueue(chunk);
+          },
+        }),
+      ),
+  });
+  assert.equal(wroteBeforeEnd, true);
+  assert.equal((await lstat(path)).size, chunk.byteLength * count);
+  assert.equal(digest, expected.digest('hex'));
+  assert.equal(
+    createHash('sha256')
+      .update(await readFile(path))
+      .digest('hex'),
+    digest,
+  );
+});
+
+void test('archive errors remove partial downloads and preserve existing destinations', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'gog-download-test-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, 'archive.zip');
+  let cancelled = false;
+  await assert.rejects(
+    downloadArchive('https://github.com/archive.zip', path, {
+      limit: 3,
+      request: async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(Buffer.from('too large'));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+        ),
+    }),
+    (error) => gogError(error).code === 'UPDATE_SIZE_LIMIT',
+  );
+  assert.equal(cancelled, true);
+  await assert.rejects(access(path));
+  await writeFile(path, 'keep');
+  await assert.rejects(
+    downloadArchive('https://github.com/archive.zip', path, {
+      request: async () => new Response('new'),
+    }),
+    (error) => gogError(error).code === 'UPDATE_REQUEST_FAILED',
+  );
+  assert.equal(await readFile(path, 'utf8'), 'keep');
+  await assert.rejects(
+    downloadArchive('https://evil.test/archive.zip', join(directory, 'unsafe'), {
+      request: async () => assert.fail('Must reject the URL before requesting it'),
+    }),
+    (error) => gogError(error).code === 'UNSAFE_UPDATE_URL',
+  );
+});
+
+void test('archive transfers reset inactivity on progress and bound stalls, totals and cancellation', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'gog-download-test-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const server = createServer((req, res) => {
+    res.writeHead(200);
+    res.write('start');
+    if (req.url === '/slow') {
+      let chunks = 0;
+      const timer = setInterval(() => {
+        res.write('more');
+        if (++chunks === 12) {
+          clearInterval(timer);
+          res.end();
+        }
+      }, 25);
+      res.on('close', () => clearInterval(timer));
+    }
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => {
+    server.closeAllConnections();
+    server.close();
+  });
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const request = (url: string, init: RequestInit) =>
+    fetch(`http://127.0.0.1:${address.port}${new URL(url).pathname}`, init);
+  const slow = join(directory, 'slow');
+  await downloadArchive('https://github.com/slow', slow, {
+    request,
+    timeoutMs: 2000,
+    inactivityTimeoutMs: 150,
+  });
+  assert.equal(await readFile(slow, 'utf8'), `start${'more'.repeat(12)}`);
+  for (const mode of ['idle', 'total', 'cancel']) {
+    const abort = new AbortController();
+    const timer = mode === 'cancel' ? setTimeout(() => abort.abort(), 80) : undefined;
+    const path = join(directory, mode);
+    try {
+      await assert.rejects(
+        downloadArchive(`https://github.com/${mode}`, path, {
+          request,
+          timeoutMs: mode === 'total' ? 80 : 1000,
+          inactivityTimeoutMs: mode === 'idle' ? 80 : 1000,
+          signal: abort.signal,
+        }),
+        (error) => gogError(error).code === 'UPDATE_REQUEST_FAILED',
+      );
+      await assert.rejects(access(path));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 });

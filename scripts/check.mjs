@@ -1,6 +1,13 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 
+// The single strict compilation checks both application code and tooling.
+// Keep JavaScript out of the application, apart from its public import facade.
+for (const name of await readdir('src', { recursive: true })) {
+  if (/\.[cm]?js$/.test(name) && name !== 'index.mjs')
+    throw new Error(`Application modules must use .mts: src/${name}`);
+}
+
 for (const directory of ['src', 'bin', 'scripts', 'test']) {
   for (const name of await readdir(directory)) {
     if (!name.endsWith('.mjs')) continue;

@@ -198,3 +198,49 @@ void test('terminal confirmation requires an affirmative answer and never reads 
   }
   assert.equal(messages.length, 4);
 });
+
+void test('successful updates retain cleanup instructions in text and JSON output', async () => {
+  const instructions =
+    'The update is installed, but cleanup is incomplete. Remove /fixture/staged before another update.';
+  const outcome = await runCLI(['self', 'update', '--yes'], {
+    service: serviceStub(),
+    updates: updateStub({
+      check: async () => available,
+      install: async () => ({ ...available, updated: true, instructions }),
+    }),
+  });
+  assert.equal(outcome.exitCode, 0);
+  assert.match(formatOutput(outcome), /Updated gog-achievements/);
+  assert.match(formatOutput(outcome), /cleanup is incomplete/);
+  assert.match(formatOutput(outcome), /\/fixture\/staged/);
+  const json = JSON.parse(formatOutput({ ...outcome, format: 'json' })) as {
+    data: { instructions: string };
+  };
+  assert.equal(json.data.instructions, instructions);
+});
+
+void test('failed updates show sanitized cleanup paths and retain the original error', async () => {
+  const cleanupPaths = ['/fixture/\u001b[31mstaged\u001b[0m', '/fixture/update.lock'];
+  const outcome = await runCLI(['self', 'update', '--yes'], {
+    service: serviceStub(),
+    updates: updateStub({
+      check: async () => available,
+      install: async () => {
+        throw new GogError('UPDATE_CHECKSUM_MISMATCH', 'The checksum does not match.', 4, {
+          cleanup_paths: cleanupPaths,
+        });
+      },
+    }),
+  });
+  assert.equal(outcome.exitCode, 4);
+  const output = formatOutput(outcome);
+  assert.match(output, /Error \[UPDATE_CHECKSUM_MISMATCH\]: The checksum does not match/);
+  assert.match(output, /Cleanup was incomplete/);
+  assert.match(output, /\/fixture\/staged/);
+  assert.match(output, /\/fixture\/update.lock/);
+  assert.equal(output.includes('\u001b'), false);
+  const json = JSON.parse(formatOutput({ ...outcome, format: 'json' })) as {
+    error: { details: { cleanup_paths: string[] } };
+  };
+  assert.deepEqual(json.error.details.cleanup_paths, cleanupPaths);
+});
