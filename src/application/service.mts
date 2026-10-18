@@ -33,6 +33,7 @@ import {
   validateAction,
 } from '../domain/queue.mjs';
 import { restorationPlan } from '../domain/restoration.mjs';
+import { filterAchievements, type AchievementFilters } from '../domain/achievements.mjs';
 import { buildLoginURL } from './oauth.mjs';
 import { validSession } from './session.mjs';
 import * as auth from './session.mjs';
@@ -106,13 +107,17 @@ export class AchievementService {
     return { session, game, achievements };
   }
 
-  async listAchievements(gameID: unknown): Promise<AchievementsResult> {
+  async listAchievements(
+    gameID: unknown,
+    filters: AchievementFilters = {},
+  ): Promise<AchievementsResult> {
     const { session, game, achievements } = await this.context(gameID);
+    const selected = filterAchievements(achievements, filters);
     return {
       user_id: session.user_id,
       game: this.publicGame(game),
-      count: achievements.length,
-      achievements,
+      count: selected.length,
+      achievements: selected,
     };
   }
 

@@ -1,4 +1,5 @@
 import { LOGIN_TIMEOUT_MS, MAX_LOGIN_TIMEOUT_MS } from '../domain/login-policy.mjs';
+import { validateAchievementStatus } from '../domain/achievements.mjs';
 import type { OutputStream, NativeLoginOptions, AuthStatus } from '../application/ports.mjs';
 import type { Queue, Success, PublicError } from '../domain/model.mjs';
 import type { CLIOutcome, CommandName, CommandData, OutcomeMeta } from './contracts.mjs';
@@ -188,9 +189,13 @@ export async function dispatchCLI(
         name,
         await service.listGames({ search: flags.search, idsOnly: flags['ids-only'] }),
       );
-    } else if (name === 'achievements list')
-      return success(name, await service.listAchievements(flags.game));
-    else if (name === 'doctor') {
+    } else if (name === 'achievements list') {
+      const status = validateAchievementStatus(flags.status);
+      return success(
+        name,
+        await service.listAchievements(flags.game, { search: flags.search, status }),
+      );
+    } else if (name === 'doctor') {
       let login: AuthStatus | PublicError;
       try {
         login = await service.authStatus();
