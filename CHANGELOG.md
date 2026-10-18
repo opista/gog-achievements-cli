@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/opista/gog-achievements-cli/compare/v0.6.0...v0.6.1) (2026-10-18)
+
+
+### Fixed
+
+* harden CLI workflows and streamline builds ([#16](https://github.com/opista/gog-achievements-cli/issues/16)) ([2097878](https://github.com/opista/gog-achievements-cli/commit/2097878ce3c7d55f5ff892fd13d914cc3966ea96))
+
 ## [0.6.0](https://github.com/opista/gog-achievements-cli/compare/v0.5.1...v0.6.0) (2026-10-18)
 
 
